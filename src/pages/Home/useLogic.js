@@ -92,28 +92,51 @@ export const useLogic = () => {
   );
 
   /* ----------------------------------------
-   * Like Post
-   * Optimistic update for immediate feedback
-   * ---------------------------------------- */
+  * Like Post (Final Real-Time Version)
+  * ---------------------------------------- */
   const handleLikePost = useCallback(async (postId) => {
     try {
-      // Update UI instantly
-      setPosts((prevPosts) =>
-        prevPosts.map((post) =>
+      // Optimistic UI update
+      setPosts((prev) =>
+        prev.map((post) =>
           post.id === postId
             ? {
                 ...post,
-                likesCount: post.likesCount + 1,
                 likedByUser: true,
+                likesCount: post.likesCount + 1,
               }
             : post
         )
       );
 
-      // API request
+      // Send API request
       const response = await actions.reaction.reactToPostAction(postId);
-      if (!response.success)
-        throw new Error(response.msg || "Failed to like the post.");
+
+      if (!response.success) {
+        // Rollback UI if failed
+        setPosts((prev) =>
+          prev.map((post) =>
+            post.id === postId
+              ? {
+                  ...post,
+                  likedByUser: false,
+                  likesCount: Math.max(post.likesCount - 1, 0),
+                }
+              : post
+          )
+        );
+        throw new Error(response.msg || "Failed to like post.");
+      }
+
+      // ✅ Save the new reactionId from the response
+      const newReactionId = response?.data?.id;
+      if (newReactionId) {
+        setPosts((prev) =>
+          prev.map((post) =>
+            post.id === postId ? { ...post, reactionId: newReactionId } : post
+          )
+        );
+      }
     } catch (error) {
       console.error("Like Post Error:", error);
       setSnackbar({
@@ -125,14 +148,16 @@ export const useLogic = () => {
   }, []);
 
   /* ----------------------------------------
-   * Remove Like (Unlike Post)
-   * Also performs optimistic update
-   * ---------------------------------------- */
+  * Remove Like (Final Real-Time Version)
+  * ---------------------------------------- */
   const handleRemoveLikePost = useCallback(async (reactionId, postId) => {
-    if (!reactionId) return;
-
     try {
-      // Optimistic state update
+      if (!reactionId) {
+        console.warn("Missing reactionId for post:", postId);
+        return;
+      }
+
+      // Optimistic UI update
       setPosts((prev) =>
         prev.map((post) =>
           post.id === postId
@@ -145,12 +170,33 @@ export const useLogic = () => {
         )
       );
 
-      // API call
+      // API call to remove the reaction
       const response = await actions.reaction.removeReactFromPostAction(
         reactionId
       );
-      if (!response.success)
+
+      if (!response.success) {
+        // Rollback on failure
+        setPosts((prev) =>
+          prev.map((post) =>
+            post.id === postId
+              ? {
+                  ...post,
+                  likedByUser: true,
+                  likesCount: post.likesCount + 1,
+                }
+              : post
+          )
+        );
         throw new Error(response.msg || "Failed to remove like.");
+      }
+
+      // ✅ Clear reactionId since like is removed
+      setPosts((prev) =>
+        prev.map((post) =>
+          post.id === postId ? { ...post, reactionId: null } : post
+        )
+      );
     } catch (error) {
       console.error("Remove Like Post Error:", error);
       setSnackbar({
@@ -427,40 +473,38 @@ export const useLogic = () => {
    * Listens for like/unlike events
    * ---------------------------------------- */
   useEffect(() => {
-    console.log("Subscribing to public reactions channel...");
-
-    // Subscribe to the public "reactions" channel
+    // Subscribe to public "reactions" channel
     const channel = echo.channel("reactions");
 
-    // Listen for new likes
+    // When someone likes a post
     channel.listen(".reaction.created", (event) => {
+      const payload = event.reaction || event;
+      const postId = Number(payload.post_id || payload.reaction_post_id);
+      const count = payload.likesCount;
+
+      // Update the specific post's like count
       setPosts((prev) =>
-        prev.map((post) =>
-          post.id === event.postId
-            ? { ...post, likesCount: event.likesCount }
-            : post
-        )
+        prev.map((p) => (p.id === postId ? { ...p, likesCount: count } : p))
       );
     });
 
-    // Listen for removed likes
+    // When someone unlikes a post
     channel.listen(".reaction.removed", (event) => {
+      const payload = event.reaction || event;
+      const postId = Number(payload.post_id || payload.reaction_post_id);
+      const count = payload.likesCount;
+
+      // Update the specific post's like count
       setPosts((prev) =>
-        prev.map((post) =>
-          post.id === event.postId
-            ? { ...post, likesCount: event.likesCount }
-            : post
-        )
+        prev.map((p) => (p.id === postId ? { ...p, likesCount: count } : p))
       );
     });
 
-    // Cleanup when component unmounts
+    // Leave channel on component unmount
     return () => {
-      console.log("Leaving reactions channel...");
       echo.leave("reactions");
     };
   }, []);
-
 
   /* ----------------------------------------
    * Initial Data Load
