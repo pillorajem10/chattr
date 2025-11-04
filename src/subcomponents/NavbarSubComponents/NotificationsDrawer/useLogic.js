@@ -10,9 +10,13 @@
 ====================================================== */
 
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { echo } from "@utils/echo";
 import actions from "@actions";
+import cookie from "js-cookie";
 
 export const useLogic = (onUnreadCountChange) => {
+  const account = JSON.parse(cookie.get("account") || "{}");
+
   const loadingRef = useRef(false);
   const observerRef = useRef(null);
   const loaderRef = useRef(null);
@@ -130,6 +134,32 @@ export const useLogic = (onUnreadCountChange) => {
     () => notifications.filter((n) => !n.notification_read).length,
     [notifications]
   );
+
+  /* ----------------------------------------
+  * Real-Time Notifications (Laravel Echo)
+  * ---------------------------------------- */
+  useEffect(() => {
+    const channel = echo.private(`notifications.${account.id}`);
+
+    // Handle new notifications
+    channel.listen(".notification.created", (event) => {
+      const newNotif = event.notification;
+      setNotifications((prev) => [newNotif, ...prev]);
+    });
+
+    // Handle notification removals
+    channel.listen(".notification.removed", (event) => {
+      const removedId = event.notification.id;
+      setNotifications((prev) =>
+        prev.filter((n) => n.id !== removedId)
+      );
+    });
+
+    return () => {
+      echo.leave(`private-notifications.${account.id}`);
+    };
+  }, []);
+
 
   /* ----------------------------------------
    * Notify parent (e.g. sidebar) when unread count changes

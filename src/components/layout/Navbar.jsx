@@ -1,6 +1,6 @@
 import { Bell } from "lucide-react";
 import { useState } from "react";
-import NotificationsDrawer from "@subcomponents/SidebarSubcomponents/NotificationsDrawer";
+import NotificationsDrawer from "@subcomponents/NavbarSubComponents/NotificationsDrawer";
 
 const Navbar = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
