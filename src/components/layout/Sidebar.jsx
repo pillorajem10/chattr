@@ -4,7 +4,9 @@ import { usePostModal } from "@contexts/PostModalContext";
 
 const Sidebar = () => {
   const { openCreatePostModal } = usePostModal();
-  const handleLogout = async () => await actions.logout();
+  const handleLogout = async () => {
+    await actions.auth.logoutAction();
+  };
 
   return (
     <aside className="fixed left-0 top-0 h-screen w-64 flex flex-col justify-between bg-white py-8 px-6 border-r border-gray-200">

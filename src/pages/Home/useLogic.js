@@ -427,9 +427,12 @@ export const useLogic = () => {
    * Listens for like/unlike events
    * ---------------------------------------- */
   useEffect(() => {
-    const channel = echo.private("reactions");
+    console.log("Subscribing to public reactions channel...");
 
-    // When someone likes a post
+    // Subscribe to the public "reactions" channel
+    const channel = echo.channel("reactions");
+
+    // Listen for new likes
     channel.listen(".reaction.created", (event) => {
       setPosts((prev) =>
         prev.map((post) =>
@@ -440,7 +443,7 @@ export const useLogic = () => {
       );
     });
 
-    // When someone unlikes a post
+    // Listen for removed likes
     channel.listen(".reaction.removed", (event) => {
       setPosts((prev) =>
         prev.map((post) =>
@@ -451,8 +454,13 @@ export const useLogic = () => {
       );
     });
 
-    return () => echo.leaveChannel("private-reactions");
+    // Cleanup when component unmounts
+    return () => {
+      console.log("Leaving reactions channel...");
+      echo.leave("reactions");
+    };
   }, []);
+
 
   /* ----------------------------------------
    * Initial Data Load
