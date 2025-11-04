@@ -4,6 +4,7 @@ import {
   getConversationService,
   sendMessageService,
   markConversationAsReadService,
+  createChatroomService,
 } from "@services/api/messages";
 
 /*===============================
@@ -40,6 +41,15 @@ export const sendMessageAction = async (payload) => {
 export const markConversationAsReadAction = async (chatroomId) => {
   try {
     const res = await markConversationAsReadService(chatroomId);
+    return res;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const createChatroomAction = async (payload) => {
+  try {
+    const res = await createChatroomService(payload);
     return res;
   } catch (error) {
     throw error;

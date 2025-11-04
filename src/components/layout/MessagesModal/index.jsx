@@ -1,37 +1,46 @@
-import React from "react";
 import Cookies from "js-cookie";
-import { X, Send, ArrowLeft, MessageCircle, User } from "lucide-react";
+import { X, Send, ArrowLeft, MessageCircle, User, PenSquare } from "lucide-react";
+import { useState } from "react";
 import { useLogic } from "./useLogic";
+
+// sub-components
+import CreateChatroomModal from "@subcomponents/MessagesModalSubComponents/CreateChatroomModal";
 
 const MessageModal = () => {
   const {
     isOpen,
     view,
+    selectedChatroom,
     chatrooms,
     messages,
-    selectedChatroom,
     messageText,
     loading,
     sending,
-
+    userPageDetails,
+    users,
     setMessageText,
-    toggleDrawer,
-    closeChat,
-    openChatroom,
+    handleToggleDrawer,
+    handleCloseChat,
+    handleOpenChatroom,
     handleSendMessage,
+    handleGetChatrooms,
+    handleCreateChatroom,  
+    handleGetUsers,         
   } = useLogic();
 
-  // ✅ Get current user ID from cookie
   const account = Cookies.get("account");
   const currentUserId = account ? JSON.parse(account)?.id : null;
 
+  // 🆕 Modal State
+  const [showCreateModal, setShowCreateModal] = useState(false);
+
   /* ----------------------------------------
-   * Floating Button
+   * Floating Button (open drawer)
    * ---------------------------------------- */
   if (!isOpen)
     return (
       <button
-        onClick={toggleDrawer}
+        onClick={handleToggleDrawer}
         className="fixed bottom-6 right-6 bg-blue-600 hover:bg-blue-700 text-white rounded-full p-4 shadow-lg transition-all z-50 flex items-center justify-center"
       >
         <MessageCircle size={24} />
@@ -48,33 +57,27 @@ const MessageModal = () => {
         {view === "chat" ? (
           <>
             <button
-              onClick={closeChat}
+              onClick={handleCloseChat}
               className="text-gray-500 hover:text-gray-700 transition"
             >
               <ArrowLeft size={20} />
             </button>
 
             <h2 className="text-lg font-semibold text-gray-800 truncate flex-1 text-center">
-                {selectedChatroom && (() => {
-                    const userId = Number(currentUserId);
-
-                    // check both snake_case and camelCase just in case
-                    const userOne = selectedChatroom.user_one || selectedChatroom.userOne;
-                    const userTwo = selectedChatroom.user_two || selectedChatroom.userTwo;
-
-                    // receiver is whoever is NOT the logged-in user
-                    const receiver =
-                    userId === selectedChatroom.cr_user_one_id ? userTwo : userOne;
-
-
-                    return receiver
-                    ? `${receiver.user_fname} ${receiver.user_lname}`
-                    : "User";
-                })()}
+              {selectedChatroom && (() => {
+                const userId = Number(currentUserId);
+                const userOne = selectedChatroom.user_one || selectedChatroom.userOne;
+                const userTwo = selectedChatroom.user_two || selectedChatroom.userTwo;
+                const receiver =
+                  userId === selectedChatroom.cr_user_one_id ? userTwo : userOne;
+                return receiver
+                  ? `${receiver.user_fname} ${receiver.user_lname}`
+                  : "User";
+              })()}
             </h2>
 
             <button
-              onClick={toggleDrawer}
+              onClick={handleToggleDrawer}
               className="text-gray-500 hover:text-gray-700 transition"
             >
               <X size={20} />
@@ -84,7 +87,7 @@ const MessageModal = () => {
           <>
             <h2 className="text-lg font-semibold text-gray-800">Messages</h2>
             <button
-              onClick={toggleDrawer}
+              onClick={handleToggleDrawer}
               className="text-gray-500 hover:text-gray-700 transition"
             >
               <X size={20} />
@@ -94,7 +97,7 @@ const MessageModal = () => {
       </div>
 
       {/* BODY */}
-      <div className="flex-1 overflow-y-auto bg-gray-50">
+      <div className="flex-1 overflow-y-auto bg-gray-50 relative">
         {view === "list" ? (
           <>
             {loading && (
@@ -110,45 +113,50 @@ const MessageModal = () => {
             )}
 
             {!loading &&
-            chatrooms.map((chatroom) => {
+              chatrooms.map((chatroom) => {
                 const userId = Number(currentUserId);
                 const receiver =
-                userId === chatroom.cr_user_one_id
+                  userId === chatroom.cr_user_one_id
                     ? chatroom.user_two || chatroom.userTwo
                     : chatroom.user_one || chatroom.userOne;
 
                 const latest = chatroom.messages?.[0];
 
                 return (
-                <div
+                  <div
                     key={chatroom.id}
-                    onClick={() => openChatroom(chatroom)}
+                    onClick={() => handleOpenChatroom(chatroom)}
                     className="flex items-center gap-3 px-4 py-3 hover:bg-gray-100 cursor-pointer transition relative"
-                >
-                    {/* Avatar */}
+                  >
                     <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
-                    <User size={20} className="text-gray-600" />
+                      <User size={20} className="text-gray-600" />
                     </div>
 
-                    {/* Name + Latest message */}
                     <div className="flex-1 overflow-hidden">
-                    <p className="font-medium text-gray-800 truncate">
+                      <p className="font-medium text-gray-800 truncate">
                         {receiver?.user_fname} {receiver?.user_lname}
-                    </p>
-                    <p className="text-sm text-gray-500 truncate">
+                      </p>
+                      <p className="text-sm text-gray-500 truncate">
                         {latest ? latest.message_content : "No messages yet"}
-                    </p>
+                      </p>
                     </div>
 
-                    {/* Unread badge */}
                     {chatroom.unread_count > 0 && (
-                    <span className="bg-blue-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                      <span className="bg-blue-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">
                         {chatroom.unread_count}
-                    </span>
+                      </span>
                     )}
-                </div>
+                  </div>
                 );
-            })}
+              })}
+
+            {/* 🆕 Compose (New Message) Floating Button */}
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="absolute bottom-4 right-4 bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-full shadow-md transition"
+            >
+              <PenSquare size={20} />
+            </button>
           </>
         ) : (
           <>
@@ -170,9 +178,7 @@ const MessageModal = () => {
                   return (
                     <div
                       key={msg.id}
-                      className={`flex ${
-                        isMine ? "justify-end" : "justify-start"
-                      }`}
+                      className={`flex ${isMine ? "justify-end" : "justify-start"}`}
                     >
                       <div
                         className={`px-4 py-2 rounded-2xl text-sm max-w-[70%] ${
@@ -216,6 +222,21 @@ const MessageModal = () => {
             <Send size={18} />
           </button>
         </div>
+      )}
+
+      {showCreateModal && (
+        <CreateChatroomModal
+          open={showCreateModal}
+          onClose={() => setShowCreateModal(false)}
+          onCreateChatroom={(userId) => {
+            handleCreateChatroom(userId, "Hi 👋");
+            setShowCreateModal(false);
+          }}
+          users={users}
+          handleGetUsers={handleGetUsers}
+          userPageDetails={userPageDetails}
+          loading={loading}
+        />
       )}
     </div>
   );

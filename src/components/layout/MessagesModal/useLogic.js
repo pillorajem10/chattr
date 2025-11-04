@@ -2,10 +2,11 @@
    Message Modal Logic Hook
    ---------------------------------------------------
    Handles:
-   - Toggling message drawer states
-   - Loading chatrooms
-   - Selecting and viewing conversation
-   - Sending and reading messages
+   - Loading chatrooms and users
+   - Opening and creating chatrooms
+   - Sending messages
+   - Marking conversations as read
+   - Snackbar feedback and UI state
 ====================================================== */
 
 import { useState, useCallback, useEffect, useRef } from "react";
@@ -14,7 +15,7 @@ import actions from "@actions";
 
 export const useLogic = () => {
   /* ----------------------------------------
-   * Current User (from cookie)
+   * Current User
    * ---------------------------------------- */
   const accountCookie = Cookies.get("account");
   const currentUser = accountCookie ? JSON.parse(accountCookie) : null;
@@ -23,8 +24,8 @@ export const useLogic = () => {
   /* ----------------------------------------
    * UI State
    * ---------------------------------------- */
-  const [isOpen, setIsOpen] = useState(false); // modal open/close
-  const [view, setView] = useState("list"); // "list" or "chat"
+  const [isOpen, setIsOpen] = useState(false);
+  const [view, setView] = useState("list");
   const [selectedChatroom, setSelectedChatroom] = useState(null);
 
   /* ----------------------------------------
@@ -33,6 +34,13 @@ export const useLogic = () => {
   const [chatrooms, setChatrooms] = useState([]);
   const [messages, setMessages] = useState([]);
   const [messageText, setMessageText] = useState("");
+  const [users, setUsers] = useState([]);
+
+  const [userPageDetails, setUserPageDetails] = useState({
+    totalRecords: 0,
+    pageIndex: 1,
+    totalPages: 1,
+  });
 
   /* ----------------------------------------
    * Loading & Snackbar
@@ -48,25 +56,23 @@ export const useLogic = () => {
   const chatroomRef = useRef(null);
 
   /* ----------------------------------------
-   * Toggle Drawer
+   * Drawer Controls
    * ---------------------------------------- */
-  const toggleDrawer = useCallback(() => {
+  const handleToggleDrawer = useCallback(() => {
     setIsOpen((prev) => !prev);
-    if (!isOpen) loadChatrooms();
+    if (!isOpen) handleGetChatrooms();
   }, [isOpen]);
 
-  const closeChat = useCallback(() => {
+  const handleCloseChat = useCallback(() => {
     setView("list");
     setSelectedChatroom(null);
     setMessages([]);
   }, []);
 
   /* ----------------------------------------
-   * Load Chatrooms
+   * Chatroom Operations
    * ---------------------------------------- */
-  const loadChatrooms = useCallback(async (filter = "all") => {
-    console.log("Loading chatrooms with filter:", filter);
-
+  const handleGetChatrooms = useCallback(async (filter = "all") => {
     try {
       setLoading(true);
       const res = await actions.message.getUserChatroomsAction(filter);
@@ -84,10 +90,7 @@ export const useLogic = () => {
     }
   }, []);
 
-  /* ----------------------------------------
-   * Load Messages
-   * ---------------------------------------- */
-  const openChatroom = useCallback(async (chatroom) => {
+  const handleOpenChatroom = useCallback(async (chatroom) => {
     try {
       setLoading(true);
       setView("chat");
@@ -99,10 +102,7 @@ export const useLogic = () => {
 
       setMessages(res.data.records);
 
-      // Mark as read
       await actions.message.markConversationAsReadAction(chatroom.id);
-
-      // Reset unread count locally
       setChatrooms((prev) =>
         prev.map((c) =>
           c.id === chatroom.id ? { ...c, unread_count: 0 } : c
@@ -120,57 +120,135 @@ export const useLogic = () => {
     }
   }, []);
 
+  const handleCreateChatroom = useCallback(
+    async (receiverId) => {
+      if (!receiverId || sending) return;
+      setSending(true);
+
+      try {
+        const res = await actions.message.createChatroomAction({
+          receiver_id: receiverId,
+        });
+
+        if (!res.success)
+          throw new Error(res.msg || "Failed to create chatroom.");
+
+        const newChatroom = res.data.chatroom;
+
+        setChatrooms((prev) => {
+          const exists = prev.some((c) => c.id === newChatroom.id);
+          return exists ? prev : [newChatroom, ...prev];
+        });
+
+        setSelectedChatroom(newChatroom);
+        setMessages([]);
+        setView("chat");
+        chatroomRef.current = newChatroom.id;
+
+        setSnackbar({
+          open: true,
+          message: "Chatroom created successfully.",
+          severity: "success",
+        });
+      } catch (error) {
+        console.error("Create Chatroom Error:", error);
+        setSnackbar({
+          open: true,
+          message: "Failed to create chatroom.",
+          severity: "error",
+        });
+      } finally {
+        setSending(false);
+      }
+    },
+    [sending]
+  );
+
   /* ----------------------------------------
-   * Send Message
+   * Messaging Operations
    * ---------------------------------------- */
-  const handleSendMessage = useCallback(async () => {
-    if (!messageText.trim() || sending || !selectedChatroom) return;
-    setSending(true);
+  const handleSendMessage = useCallback(
+    async () => {
+      if (!messageText.trim() || sending || !selectedChatroom) return;
+      setSending(true);
 
+      try {
+        const receiverId =
+          selectedChatroom.cr_user_one_id === currentUserId
+            ? selectedChatroom.cr_user_two_id
+            : selectedChatroom.cr_user_one_id;
+
+        const res = await actions.message.sendMessageAction({
+          message_chatroom_id: selectedChatroom.id,
+          message_receiver_id: receiverId,
+          message_content: messageText.trim(),
+        });
+
+        if (!res.success)
+          throw new Error(res.msg || "Failed to send message.");
+
+        setMessages((prev) => [res.data.message, ...prev]);
+        setMessageText("");
+      } catch (error) {
+        console.error("Send Message Error:", error);
+        setSnackbar({
+          open: true,
+          message: "Failed to send message.",
+          severity: "error",
+        });
+      } finally {
+        setSending(false);
+      }
+    },
+    [messageText, selectedChatroom, sending, currentUserId]
+  );
+
+  /* ----------------------------------------
+   * User Operations
+   * ---------------------------------------- */
+  const handleGetUsers = useCallback(async (pageIndex = 1) => {
     try {
-      const receiverId =
-        selectedChatroom.cr_user_one_id === currentUserId
-          ? selectedChatroom.cr_user_two_id
-          : selectedChatroom.cr_user_one_id;
+      setLoading(true);
+      const res = await actions.user.fetchUsersAction(pageIndex);
+      if (!res.success) throw new Error(res.msg || "Failed to load users.");
 
-      const res = await actions.message.sendMessageAction({
-        message_receiver_id: receiverId,
-        message_content: messageText.trim(),
+      setUsers((prev) =>
+        pageIndex === 1 ? res.data.records : [...prev, ...res.data.records]
+      );
+
+      setUserPageDetails({
+        totalRecords: res.data.total_records,
+        pageIndex: res.data.page_index,
+        totalPages: res.data.total_pages,
       });
-
-      if (!res.success) throw new Error(res.msg || "Failed to send message.");
-
-      // Add new message to the local state
-      setMessages((prev) => [res.data.message, ...prev]);
-      setMessageText("");
     } catch (error) {
-      console.error("Send Message Error:", error);
+      console.error("User Load Error:", error);
       setSnackbar({
         open: true,
-        message: "Failed to send message.",
+        message: "Failed to load users.",
         severity: "error",
       });
     } finally {
-      setSending(false);
+      setLoading(false);
     }
-  }, [messageText, selectedChatroom, sending, currentUserId]);
+  }, []);
 
   /* ----------------------------------------
-   * Snackbar Close
+   * Snackbar Controls
    * ---------------------------------------- */
   const handleCloseSnackbar = useCallback(() => {
     setSnackbar((prev) => ({ ...prev, open: false }));
   }, []);
 
   /* ----------------------------------------
-   * Auto-load Chatrooms When Open
+   * Auto-load Chatrooms When Drawer Opens
    * ---------------------------------------- */
   useEffect(() => {
-    if (isOpen) loadChatrooms();
-  }, [isOpen, loadChatrooms]);
+    if (isOpen) handleGetChatrooms();
+  }, [isOpen, handleGetChatrooms]);
 
   /* ----------------------------------------
-   * Return Public State & Methods
+   * Public API
    * ---------------------------------------- */
   return {
     isOpen,
@@ -182,13 +260,18 @@ export const useLogic = () => {
     loading,
     sending,
     snackbar,
+    userPageDetails,
+    users,
     setMessageText,
-    toggleDrawer,
-    closeChat,
-    openChatroom,
+    handleToggleDrawer,
+    handleCloseChat,
+    handleOpenChatroom,
+    handleCreateChatroom,
     handleSendMessage,
-    loadChatrooms,
+    handleGetChatrooms,
+    handleGetUsers,
     handleCloseSnackbar,
+    setSnackbar,
     currentUserId,
   };
 };
