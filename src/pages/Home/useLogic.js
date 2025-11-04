@@ -92,63 +92,45 @@ export const useLogic = () => {
   );
 
   /* ----------------------------------------
-  * Like Post (Final Real-Time Version)
+  * Like Post
+  * Optimistic UI update with backend sync
   * ---------------------------------------- */
   const handleLikePost = useCallback(async (postId) => {
     try {
-      // Optimistic UI update
+      // Optimistically mark the post as liked and increment count
       setPosts((prev) =>
         prev.map((post) =>
           post.id === postId
-            ? {
-                ...post,
-                likedByUser: true,
-                likesCount: post.likesCount + 1,
-              }
+            ? { ...post, likedByUser: true, likesCount: post.likesCount + 1 }
             : post
         )
       );
 
-      // Send API request
+      // Send request to backend to register the like
       const response = await actions.reaction.reactToPostAction(postId);
+      if (!response.success) throw new Error(response.msg);
 
-      if (!response.success) {
-        // Rollback UI if failed
+      // Update post with new reaction ID returned by backend
+      const reactionId = response?.data?.id;
+      if (reactionId) {
         setPosts((prev) =>
           prev.map((post) =>
-            post.id === postId
-              ? {
-                  ...post,
-                  likedByUser: false,
-                  likesCount: Math.max(post.likesCount - 1, 0),
-                }
-              : post
-          )
-        );
-        throw new Error(response.msg || "Failed to like post.");
-      }
-
-      // ✅ Save the new reactionId from the response
-      const newReactionId = response?.data?.id;
-      if (newReactionId) {
-        setPosts((prev) =>
-          prev.map((post) =>
-            post.id === postId ? { ...post, reactionId: newReactionId } : post
+            post.id === postId ? { ...post, reactionId } : post
           )
         );
       }
+
+      // Return full response for component-level handling
+      return response;
     } catch (error) {
       console.error("Like Post Error:", error);
-      setSnackbar({
-        open: true,
-        message: error.message || "An unexpected error occurred.",
-        severity: "error",
-      });
+      return { success: false, msg: error.message || "Unexpected error." };
     }
   }, []);
 
   /* ----------------------------------------
-  * Remove Like (Final Real-Time Version)
+  * Remove Like
+  * Optimistic UI update with backend sync
   * ---------------------------------------- */
   const handleRemoveLikePost = useCallback(async (reactionId, postId) => {
     try {
@@ -157,7 +139,7 @@ export const useLogic = () => {
         return;
       }
 
-      // Optimistic UI update
+      // Optimistically mark the post as unliked and decrement count
       setPosts((prev) =>
         prev.map((post) =>
           post.id === postId
@@ -170,13 +152,11 @@ export const useLogic = () => {
         )
       );
 
-      // API call to remove the reaction
-      const response = await actions.reaction.removeReactFromPostAction(
-        reactionId
-      );
+      // Send request to backend to remove the reaction
+      const response = await actions.reaction.removeReactFromPostAction(reactionId);
 
+      // Revert optimistic update if request fails
       if (!response.success) {
-        // Rollback on failure
         setPosts((prev) =>
           prev.map((post) =>
             post.id === postId
@@ -191,7 +171,7 @@ export const useLogic = () => {
         throw new Error(response.msg || "Failed to remove like.");
       }
 
-      // ✅ Clear reactionId since like is removed
+      // Clear reaction ID after successful removal
       setPosts((prev) =>
         prev.map((post) =>
           post.id === postId ? { ...post, reactionId: null } : post
@@ -209,7 +189,6 @@ export const useLogic = () => {
 
   /* ----------------------------------------
    * Infinite Scroll
-   * Triggers when near bottom (Instagram-style)
    * ---------------------------------------- */
   useEffect(() => {
     if (!loaderRef.current) return;
@@ -229,7 +208,7 @@ export const useLogic = () => {
         }
       },
       {
-        rootMargin: "800px 0px 800px 0px", // Trigger early
+        rootMargin: "800px 0px 800px 0px",
         threshold: 0.1,
       }
     );

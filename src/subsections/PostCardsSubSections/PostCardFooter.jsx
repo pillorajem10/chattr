@@ -1,6 +1,14 @@
 import { useState, useEffect } from "react";
 import { Heart, MessageCircle, Share2 } from "lucide-react";
 
+/**
+ * PostCardFooter
+ * --------------------------------------------------
+ * Handles user interactions for reactions (like/unlike),
+ * opening comments, and sharing posts.
+ * Provides local optimistic UI updates while syncing with
+ * backend state and real-time broadcasts.
+ */
 const PostCardFooter = ({
   postId,
   isLiked = false,
@@ -13,31 +21,51 @@ const PostCardFooter = ({
   onOpenPostDetails,
   onShare,
 }) => {
-  // Local reactive state to reflect instant like/unlike feedback
+  // Local state for real-time and optimistic UI behavior
   const [liked, setLiked] = useState(isLiked);
   const [localLikes, setLocalLikes] = useState(likesCount);
+  const [localReactionId, setLocalReactionId] = useState(reactionId);
 
-  // Keep local state in sync with parent updates (e.g., realtime updates or refresh)
-  useEffect(() => {
-    setLiked(isLiked);
-  }, [isLiked]);
+  // Keep component state synchronized with parent updates
+  useEffect(() => setLiked(isLiked), [isLiked]);
+  useEffect(() => setLocalLikes(likesCount), [likesCount]);
+  useEffect(() => setLocalReactionId(reactionId), [reactionId]);
 
-  useEffect(() => {
-    setLocalLikes(likesCount);
-  }, [likesCount]);
-
+  /**
+   * Handle Like/Unlike Button Click
+   * Updates local UI immediately, triggers backend requests,
+   * and maintains the latest reaction ID for future actions.
+   */
   const handleLikeClick = async () => {
-    // Prevent double toggles until backend responds
-    if (liked && reactionId) {
-      // Unlike
+    console.log(
+      `[Post ${postId}] Like button clicked | liked: ${liked}, reactionId: ${localReactionId}`
+    );
+
+    if (liked) {
+      // Unlike post
+      console.log(`[Post ${postId}] Sending unlike request...`);
       setLiked(false);
       setLocalLikes((prev) => Math.max(prev - 1, 0));
-      await onRemoveLike?.(reactionId, postId);
+
+      if (localReactionId) {
+        await onRemoveLike?.(localReactionId, postId);
+        setLocalReactionId(null);
+      }
     } else {
-      // Like
+      // Like post
+      console.log(`[Post ${postId}] Sending like request...`);
       setLiked(true);
       setLocalLikes((prev) => prev + 1);
-      await onLike?.(postId);
+
+      const response = await onLike?.(postId);
+
+      // Store the newly created reaction ID for subsequent actions
+      if (response?.success && response?.data?.id) {
+        console.log(
+          `[Post ${postId}] Received new reaction ID: ${response.data.id}`
+        );
+        setLocalReactionId(response.data.id);
+      }
     }
   };
 
