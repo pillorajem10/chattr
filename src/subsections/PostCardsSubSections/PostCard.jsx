@@ -2,7 +2,7 @@ import { User } from "lucide-react";
 import PostCardFooter from "@subsections/PostCardsSubsections/PostCardFooter";
 import SharedPostCard from "@subsections/PostCardsSubsections/SharedPostCard";
 
-const PostCard = ({ post, onLike, onRemoveLike }) => {
+const PostCard = ({ post, onLike, onRemoveLike, onOpenPostDetails, onShare }) => {
   const {
     id,
     user,
@@ -49,7 +49,9 @@ const PostCard = ({ post, onLike, onRemoveLike }) => {
         isLiked={likedByUser}
         likesCount={likesCount}
         commentCount={commentCount}
+        onOpenPostDetails={onOpenPostDetails}
         shareCount={shareCount}
+        onShare={onShare}
         onLike={onLike}
         onRemoveLike={onRemoveLike}
       />

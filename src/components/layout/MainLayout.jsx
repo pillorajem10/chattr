@@ -7,31 +7,41 @@ import Sidebar from "@components/layout/Sidebar";
 import Footer from "@components/layout/Footer";
 
 const MainLayout = () => {
+  const SIDEBAR_WIDTH = 256; // matches w-64 in Sidebar
+  const NAVBAR_HEIGHT = 56;  // roughly h-14
+
   return (
-    <div className="min-h-screen bg-white text-gray-900 flex flex-col md:flex-row">
-      {/* Sidebar (Visible on large screens only) */}
-      <aside className="hidden md:flex md:w-1/5 lg:w-1/6 xl:w-1/5 border-r border-gray-200 bg-white p-4 sticky top-0 h-screen">
+    <div className="bg-gray-50 min-h-screen">
+      {/* Sidebar (visible only on large screens) */}
+      <aside
+        className="hidden lg:block fixed left-0 top-0 h-screen w-64 border-r border-gray-200 bg-white z-30"
+      >
         <Sidebar />
       </aside>
 
+      {/* Navbar (always visible) */}
+      <header
+        className="fixed top-0 left-0 lg:left-64 right-0 h-14 bg-white border-b border-gray-200 z-40 flex items-center"
+      >
+        <Navbar />
+      </header>
+
       {/* Main Content */}
-      <main className="flex-1 flex flex-col md:h-screen overflow-y-auto bg-gray-50">
-        {/* Navbar (Visible on small to medium screens only) */}
-        <div className="md:hidden fixed top-0 left-0 w-full bg-white border-b border-gray-200 z-50 shadow-sm">
-          <Navbar />
-        </div>
-
-        {/* CONTENT AREA */}
-        <div className="flex-1 mt-14 md:mt-0 mb-16 md:mb-0 overflow-y-auto px-4">
-          <Outlet />{" "}
-          {/* ✅ This is where your child page (e.g., Home) renders */}
-        </div>
-
-        {/* Footer Menu (Visible on small to medium screens only) */}
-        <div className="md:hidden fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 z-50 shadow-sm">
-          <Footer />
+      <main
+        className="pt-14 bg-gray-50 overflow-y-auto min-h-screen transition-all"
+        style={{
+          paddingLeft: "calc(100vw >= 1024px ? 256px : 0)", // for clarity only; Tailwind handles it
+        }}
+      >
+        <div className="p-6 lg:pl-64">
+          <Outlet />
         </div>
       </main>
+
+      {/* Footer (visible only on small to medium screens) */}
+      <div className="md:hidden fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 z-50 shadow-sm">
+        <Footer />
+      </div>
     </div>
   );
 };

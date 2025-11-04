@@ -13,6 +13,9 @@ import Default from "@pages/Default";
 import AuthRouter from "@routers/AuthRouter";
 import NonAuthRouter from "@routers/NonAuthRouter";
 
+// context
+import { PostModalProvider } from "@contexts/PostModalContext";
+
 const AppRoutes = () => (
   <Routes>
     {/* Non-Authenticated Routes */}
@@ -32,7 +35,9 @@ const AppRoutes = () => (
       path="/"
       element={
         <AuthRouter>
-          <MainLayout />
+          <PostModalProvider>
+            <MainLayout />
+          </PostModalProvider>
         </AuthRouter>
       }
     >

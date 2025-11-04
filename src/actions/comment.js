@@ -18,9 +18,9 @@ export const commentToPostAction = async (postId, comment) => {
   }
 };
 
-export const fetchCommentsByPostAction = async (postId) => {
+export const fetchCommentsByPostAction = async (postId, payload) => {
   try {
-    const res = await fetchCommentsByPostService(postId);
+    const res = await fetchCommentsByPostService(postId, payload);
     return res;
   } catch (error) {
     throw error;

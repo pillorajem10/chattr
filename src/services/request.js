@@ -30,6 +30,8 @@ const requestMethod = (url, options = {}) => {
       return axios.put(baseUrl + url, option);
     case "DELETE":
       return axios.delete(baseUrl + url, { data: option });
+    case "PATCH":
+      return axios.patch(baseUrl + url, option);
     default:
       return axios.get(baseUrl + url, option);
   }
@@ -110,3 +112,13 @@ export const PUT = (url, options) => fetch(url, { ...options, method: "PUT" });
  */
 export const DELETE = (url, options) =>
   fetch(url, { ...options, method: "DELETE" });
+
+/**
+ * handle patch request
+ * @param url
+ * @param options
+ * @constructor
+ */
+export const PATCH = (url, options) =>
+  fetch(url, { ...options, method: "PATCH" });
+

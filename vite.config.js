@@ -14,6 +14,8 @@ export default defineConfig({
       "@utils": path.resolve(__dirname, "src/utils"),
       "@routers": path.resolve(__dirname, "src/routers"),
       "@subsections": path.resolve(__dirname, "src/subsections"),
+      "@subcomponents": path.resolve(__dirname, "src/subcomponents"),
+      "@contexts": path.resolve(__dirname, "src/contexts"),
     },
   },
 });

@@ -6,7 +6,7 @@
 import * as helpers from "@utils/helpers";
 
 // requests
-import { POST, GET } from "@services/request";
+import { GET, PATCH } from "@services/request";
 
 export async function fetchNotificationsService(payload) {
   const params = helpers.convertQueryString(payload);
@@ -14,9 +14,9 @@ export async function fetchNotificationsService(payload) {
 }
 
 export async function markNotificationAsReadService(notificationId) {
-  return POST(`/notifications/${notificationId}/read`);
+  return PATCH(`/notifications/read/${notificationId}`);
 }
 
 export async function markAllNotificationsAsReadService() {
-  return POST(`/notifications/read-all`);
+  return PATCH(`/notifications/read-all`);
 }

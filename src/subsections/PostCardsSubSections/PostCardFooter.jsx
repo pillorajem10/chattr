@@ -9,7 +9,7 @@ const PostCardFooter = ({
   reactionId = null,
   onLike,
   onRemoveLike,
-  onComment,
+  onOpenPostDetails,
   onShare,
 }) => {
   const handleLikeClick = () => {
@@ -39,7 +39,7 @@ const PostCardFooter = ({
 
       {/* Comment Button */}
       <button
-        onClick={() => onComment?.(postId)}
+        onClick={() => onOpenPostDetails(postId)}
         className="flex items-center gap-2 hover:text-blue-500 transition-colors"
       >
         <MessageCircle size={22} strokeWidth={2} />
@@ -48,7 +48,7 @@ const PostCardFooter = ({
 
       {/* Share Button */}
       <button
-        onClick={() => onShare?.(postId)}
+        onClick={() => onShare(postId)}
         className="flex items-center gap-2 hover:text-green-500 transition-colors"
       >
         <Share2 size={22} strokeWidth={2} />

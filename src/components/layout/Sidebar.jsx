@@ -1,60 +1,49 @@
-import {
-  Home,
-  LogOut,
-  Bell,
-  MessageCircle,
-  PlusSquare,
-  User,
-} from "lucide-react";
+import { Home, LogOut, MessageCircle, PlusSquare, User } from "lucide-react";
 import actions from "@actions";
+import { usePostModal } from "@contexts/PostModalContext";
 
 const Sidebar = () => {
-  const handleLogout = async () => {
-    await actions.logout();
-  };
+  const { openCreatePostModal } = usePostModal();
+  const handleLogout = async () => await actions.logout();
 
   return (
-    <aside className="fixed left-0 top-0 h-screen w-64 flex flex-col justify-between bg-white py-8 px-6">
-      {/* Top Section */}
+    <aside className="fixed left-0 top-0 h-screen w-64 flex flex-col justify-between bg-white py-8 px-6 border-r border-gray-200">
       <div>
         <h1 className="text-3xl font-extrabold mb-6 tracking-tight text-gray-800">
           Chattr
         </h1>
 
         <nav className="flex flex-col gap-6">
-          <button className="flex items-center gap-4 text-lg text-gray-700 hover:text-blue-600 transition-colors">
-            <Home size={26} strokeWidth={2} /> Home
-          </button>
-
-          <button className="flex items-center gap-4 text-lg text-gray-700 hover:text-blue-600 transition-colors">
-            <MessageCircle size={26} strokeWidth={2} /> Messages
-          </button>
-
-          <button className="flex items-center gap-4 text-lg text-gray-700 hover:text-blue-600 transition-colors">
-            <Bell size={26} strokeWidth={2} /> Notifications
-          </button>
-
-          <button className="flex items-center gap-4 text-lg text-gray-700 hover:text-blue-600 transition-colors">
-            <PlusSquare size={26} strokeWidth={2} /> Create
-          </button>
-
-          <button className="flex items-center gap-4 text-lg text-gray-700 hover:text-blue-600 transition-colors">
-            <User size={26} strokeWidth={2} /> Profile
-          </button>
+          <SidebarButton icon={<Home size={24} />} label="Home" />
+          <SidebarButton icon={<MessageCircle size={24} />} label="Messages" />
+          <SidebarButton
+            icon={<PlusSquare size={24} />}
+            label="Create"
+            onClick={openCreatePostModal}
+          />
+          <SidebarButton icon={<User size={24} />} label="Profile" />
         </nav>
       </div>
 
-      {/* Bottom Section */}
-      <div>
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-4 text-lg text-gray-700 hover:text-red-600 transition-colors"
-        >
-          <LogOut size={26} strokeWidth={2} /> Logout
-        </button>
-      </div>
+      <SidebarButton
+        icon={<LogOut size={24} />}
+        label="Logout"
+        onClick={handleLogout}
+      />
     </aside>
   );
 };
+
+const SidebarButton = ({ icon, label, onClick, active }) => (
+  <button
+    onClick={onClick}
+    className={`flex items-center gap-4 text-gray-700 text-lg transition-colors hover:text-blue-600 ${
+      active ? "text-blue-600 font-semibold" : ""
+    }`}
+  >
+    {icon}
+    <span>{label}</span>
+  </button>
+);
 
 export default Sidebar;
