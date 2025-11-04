@@ -6,17 +6,20 @@
 import * as helpers from "@utils/helpers";
 
 // requests
-import { POST, GET } from "@services/request";
+import { POST, GET, PATCH } from "@services/request";
 
-export async function fetchConversationService(receiverId, payload) {
-  const params = helpers.convertQueryString(payload);
-  return GET(`/messages/conversation/${receiverId}?${params}`);
-}
+export async function getUserChatroomsService() {
+  return GET(`/messages/`);
+};
+
+export async function getConversationService(chatroomId) {
+  return GET(`/messages/${chatroomId}`);
+};
 
 export async function sendMessageService(payload) {
-  return POST(`/messages`, payload);
-}
+  return POST(`/messages/`, payload);
+}; 
 
-export async function markConversationAsReadService(senderId) {
-  return POST(`/messages/mark-read/${senderId}`);
-}
+export async function markConversationAsReadService(chatroomId) {
+  return PATCH(`/messages/${chatroomId}/mark-read`);
+};

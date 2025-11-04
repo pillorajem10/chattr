@@ -1,6 +1,7 @@
 // services api
 import {
-  fetchConversationService,
+  getUserChatroomsService,
+  getConversationService,
   sendMessageService,
   markConversationAsReadService,
 } from "@services/api/messages";
@@ -9,9 +10,18 @@ import {
         MESSAGES ACTIONS
 ================================*/
 
-export const fetchConversationAction = async (receiverId, payload) => {
+export const getUserChatroomsAction = async () => {
   try {
-    const res = await fetchConversationService(receiverId, payload);
+    const res = await getUserChatroomsService();
+    return res;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const getConversationAction = async (chatroomId) => {
+  try {
+    const res = await getConversationService(chatroomId);
     return res;
   } catch (error) {
     throw error;
@@ -27,9 +37,9 @@ export const sendMessageAction = async (payload) => {
   }
 };
 
-export const markConversationAsReadAction = async (senderId) => {
+export const markConversationAsReadAction = async (chatroomId) => {
   try {
-    const res = await markConversationAsReadService(senderId);
+    const res = await markConversationAsReadService(chatroomId);
     return res;
   } catch (error) {
     throw error;

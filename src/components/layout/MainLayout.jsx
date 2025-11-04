@@ -5,13 +5,11 @@ import { Outlet } from "react-router-dom";
 import Navbar from "@components/layout/Navbar";
 import Sidebar from "@components/layout/Sidebar";
 import Footer from "@components/layout/Footer";
+import MessagesModal from "@components/layout/MessagesModal"; 
 
 const MainLayout = () => {
-  const SIDEBAR_WIDTH = 256; // matches w-64 in Sidebar
-  const NAVBAR_HEIGHT = 56;  // roughly h-14
-
   return (
-    <div className="bg-gray-50 min-h-screen">
+    <div className="bg-gray-50 min-h-screen relative">
       {/* Sidebar (visible only on large screens) */}
       <aside
         className="hidden lg:block fixed left-0 top-0 h-screen w-64 border-r border-gray-200 bg-white z-30"
@@ -30,7 +28,7 @@ const MainLayout = () => {
       <main
         className="pt-14 bg-gray-50 overflow-y-auto min-h-screen transition-all"
         style={{
-          paddingLeft: "calc(100vw >= 1024px ? 256px : 0)", // for clarity only; Tailwind handles it
+          paddingLeft: "calc(100vw >= 1024px ? 256px : 0)",
         }}
       >
         <div className="p-6 lg:pl-64">
@@ -42,6 +40,9 @@ const MainLayout = () => {
       <div className="md:hidden fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 z-50 shadow-sm">
         <Footer />
       </div>
+
+      {/* Global Floating Chat Modal */}
+      <MessagesModal />
     </div>
   );
 };

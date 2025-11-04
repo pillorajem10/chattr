@@ -69,7 +69,7 @@ export const useLogic = () => {
 
         setSnackbar({
           open: true,
-          message: error.message || "An unexpected error occurred.",
+          message: error || "An unexpected error occurred.",
           severity: "error",
         });
       } finally {
