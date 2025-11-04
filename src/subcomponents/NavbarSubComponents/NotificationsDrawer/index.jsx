@@ -5,7 +5,7 @@ const NotificationsDrawer = ({
   open,
   onClose,
   leftOffsetPx = 80,
-  onUnreadCountChange, // 👈 new optional prop
+  onUnreadCountChange,
 }) => {
   const {
     notifications,
@@ -16,7 +16,7 @@ const NotificationsDrawer = ({
     markAllAsRead,
     markAsRead,
     allRead,
-  } = useLogic(onUnreadCountChange); // 👈 pass callback into hook
+  } = useLogic(onUnreadCountChange);
 
   return (
     <>

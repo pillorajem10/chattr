@@ -1,5 +1,12 @@
 import Cookies from "js-cookie";
-import { X, Send, ArrowLeft, MessageCircle, User, PenSquare } from "lucide-react";
+import {
+  X,
+  Send,
+  ArrowLeft,
+  MessageCircle,
+  User,
+  PenSquare,
+} from "lucide-react";
 import { useState } from "react";
 import { useLogic } from "./useLogic";
 
@@ -16,6 +23,7 @@ const MessageModal = () => {
     messageText,
     loading,
     sending,
+    snackbar,
     userPageDetails,
     users,
     setMessageText,
@@ -23,25 +31,25 @@ const MessageModal = () => {
     handleCloseChat,
     handleOpenChatroom,
     handleSendMessage,
-    handleGetChatrooms,
-    handleCreateChatroom,  
-    handleGetUsers,         
+    handleGetUsers,
+    handleCreateChatroom,
+    handleCloseSnackbar,
   } = useLogic();
 
   const account = Cookies.get("account");
   const currentUserId = account ? JSON.parse(account)?.id : null;
 
-  // 🆕 Modal State
   const [showCreateModal, setShowCreateModal] = useState(false);
 
   /* ----------------------------------------
-   * Floating Button (open drawer)
+   * Floating Button (Open Drawer)
    * ---------------------------------------- */
   if (!isOpen)
     return (
       <button
         onClick={handleToggleDrawer}
         className="fixed bottom-6 right-6 bg-blue-600 hover:bg-blue-700 text-white rounded-full p-4 shadow-lg transition-all z-50 flex items-center justify-center"
+        title="Messages"
       >
         <MessageCircle size={24} />
       </button>
@@ -52,7 +60,7 @@ const MessageModal = () => {
    * ---------------------------------------- */
   return (
     <div className="fixed bottom-6 right-6 w-96 h-[550px] bg-white shadow-2xl rounded-2xl flex flex-col overflow-hidden border border-gray-200 z-50">
-      {/* HEADER */}
+      {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b bg-gray-50">
         {view === "chat" ? (
           <>
@@ -64,16 +72,21 @@ const MessageModal = () => {
             </button>
 
             <h2 className="text-lg font-semibold text-gray-800 truncate flex-1 text-center">
-              {selectedChatroom && (() => {
-                const userId = Number(currentUserId);
-                const userOne = selectedChatroom.user_one || selectedChatroom.userOne;
-                const userTwo = selectedChatroom.user_two || selectedChatroom.userTwo;
-                const receiver =
-                  userId === selectedChatroom.cr_user_one_id ? userTwo : userOne;
-                return receiver
-                  ? `${receiver.user_fname} ${receiver.user_lname}`
-                  : "User";
-              })()}
+              {selectedChatroom &&
+                (() => {
+                  const userId = Number(currentUserId);
+                  const userOne =
+                    selectedChatroom.user_one || selectedChatroom.userOne;
+                  const userTwo =
+                    selectedChatroom.user_two || selectedChatroom.userTwo;
+                  const receiver =
+                    userId === selectedChatroom.cr_user_one_id
+                      ? userTwo
+                      : userOne;
+                  return receiver
+                    ? `${receiver.user_fname} ${receiver.user_lname}`
+                    : "User";
+                })()}
             </h2>
 
             <button
@@ -96,7 +109,7 @@ const MessageModal = () => {
         )}
       </div>
 
-      {/* BODY */}
+      {/* Body */}
       <div className="flex-1 overflow-y-auto bg-gray-50 relative">
         {view === "list" ? (
           <>
@@ -150,10 +163,11 @@ const MessageModal = () => {
                 );
               })}
 
-            {/* 🆕 Compose (New Message) Floating Button */}
+            {/* Compose (New Message) Floating Button */}
             <button
               onClick={() => setShowCreateModal(true)}
               className="absolute bottom-4 right-4 bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-full shadow-md transition"
+              title="New Message"
             >
               <PenSquare size={20} />
             </button>
@@ -165,19 +179,17 @@ const MessageModal = () => {
                 Loading messages...
               </p>
             ) : (
-              <div className="flex flex-col-reverse gap-3 px-4 py-3">
+              <div className="chat-messages-container flex flex-col-reverse gap-3 px-4 py-3 overflow-y-auto h-full">
                 {messages.length === 0 && (
-                  <p className="text-center text-gray-400 mt-10">
-                    No messages yet.
-                  </p>
+                  <p className="text-center text-gray-400 mt-10">No messages yet.</p>
                 )}
 
                 {messages.map((msg) => {
-                  const isMine = msg.message_sender_id === currentUserId;
-
+                  if (!msg) return null;
+                  const isMine = Number(msg.message_sender_id) === Number(currentUserId);
                   return (
                     <div
-                      key={msg.id}
+                      key={msg.id || Math.random()}
                       className={`flex ${isMine ? "justify-end" : "justify-start"}`}
                     >
                       <div
@@ -187,7 +199,7 @@ const MessageModal = () => {
                             : "bg-gray-200 text-gray-800 rounded-bl-none"
                         }`}
                       >
-                        {msg.message_content}
+                        {msg.message_content || ""}
                       </div>
                     </div>
                   );
@@ -198,7 +210,7 @@ const MessageModal = () => {
         )}
       </div>
 
-      {/* FOOTER */}
+      {/* Footer */}
       {view === "chat" && (
         <div className="border-t p-3 flex items-center gap-2 bg-white">
           <input
@@ -218,18 +230,20 @@ const MessageModal = () => {
                 ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                 : "bg-blue-600 hover:bg-blue-700 text-white"
             }`}
+            title="Send"
           >
             <Send size={18} />
           </button>
         </div>
       )}
 
+      {/* Create Chatroom Modal */}
       {showCreateModal && (
         <CreateChatroomModal
           open={showCreateModal}
           onClose={() => setShowCreateModal(false)}
           onCreateChatroom={(userId) => {
-            handleCreateChatroom(userId, "Hi 👋");
+            handleCreateChatroom(userId);
             setShowCreateModal(false);
           }}
           users={users}
@@ -237,6 +251,23 @@ const MessageModal = () => {
           userPageDetails={userPageDetails}
           loading={loading}
         />
+      )}
+
+      {/* Snackbar Notification */}
+      {snackbar.open && (
+        <div
+          className={`absolute bottom-4 left-1/2 -translate-x-1/2 bg-${
+            snackbar.severity === "error" ? "red" : "blue"
+          }-600 text-white px-4 py-2 rounded-lg text-sm shadow-lg transition-opacity duration-300`}
+        >
+          {snackbar.message}
+          <button
+            onClick={handleCloseSnackbar}
+            className="ml-3 text-white/80 hover:text-white font-semibold"
+          >
+            ×
+          </button>
+        </div>
       )}
     </div>
   );

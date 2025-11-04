@@ -147,14 +147,6 @@ export const useLogic = (onUnreadCountChange) => {
       setNotifications((prev) => [newNotif, ...prev]);
     });
 
-    // Handle notification removals
-    channel.listen(".notification.removed", (event) => {
-      const removedId = event.notification.id;
-      setNotifications((prev) =>
-        prev.filter((n) => n.id !== removedId)
-      );
-    });
-
     return () => {
       echo.leave(`private-notifications.${account.id}`);
     };

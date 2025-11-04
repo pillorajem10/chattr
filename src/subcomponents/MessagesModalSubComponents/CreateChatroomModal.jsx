@@ -15,50 +15,64 @@ const CreateChatroomModal = ({
   const loaderRef = useRef(null);
 
   /* ----------------------------------------
-   * 🧠 Auto-fetch users when modal opens
+   * Auto-fetch users when modal opens
    * ---------------------------------------- */
   useEffect(() => {
     if (open && users.length === 0) {
-      handleGetUsers(1);
+      handleGetUsers(1, "");
     }
   }, [open]);
 
   /* ----------------------------------------
-   * Infinite Scroll
+   * Debounced Search (syncs with backend)
    * ---------------------------------------- */
   useEffect(() => {
-    if (!loaderRef.current) return;
-
-    const observer = new IntersectionObserver(
-      async (entries) => {
-        const target = entries[0];
-        if (
-          target.isIntersecting &&
-          !loading &&
-          userPageDetails.pageIndex < userPageDetails.totalPages
-        ) {
-          await handleGetUsers(userPageDetails.pageIndex + 1);
-        }
-      },
-      { rootMargin: "400px", threshold: 0.1 }
-    );
-
-    const current = loaderRef.current;
-    observer.observe(current);
-    return () => observer.unobserve(current);
-  }, [loading, userPageDetails, handleGetUsers]);
+    if (!open) return;
+    const delay = setTimeout(() => {
+      handleGetUsers(1, search);
+    }, 500);
+    return () => clearTimeout(delay);
+  }, [search, open]);
 
   /* ----------------------------------------
-   * Filter Search
+   * Infinite Scroll (Stable Version)
    * ---------------------------------------- */
-  const filteredUsers = users.filter((u) => {
-    const name = `${u.user_fname || ""} ${u.user_lname || ""}`.toLowerCase();
-    const username = u.username?.toLowerCase() || "";
-    return (
-      name.includes(search.toLowerCase()) ||
-      username.includes(search.toLowerCase())
+  useEffect(() => {
+    if (!open) return;
+    if (!loaderRef.current) return;
+
+    const scrollContainer = loaderRef.current.closest(".overflow-y-auto");
+    if (!scrollContainer) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const first = entries[0];
+        if (
+          first.isIntersecting &&
+          !loading &&
+          !search.trim() &&
+          userPageDetails.pageIndex < userPageDetails.totalPages
+        ) {
+          handleGetUsers(userPageDetails.pageIndex + 1, "");
+        }
+      },
+      {
+        root: scrollContainer,
+        rootMargin: "200px",
+        threshold: 0.1,
+      }
     );
-  });
+
+    observer.observe(loaderRef.current);
+    return () => observer.disconnect();
+  }, [
+    open,
+    handleGetUsers,
+    loading,
+    search,
+    userPageDetails.pageIndex,
+    userPageDetails.totalPages,
+  ]);
 
   /* ----------------------------------------
    * Handle Submit
@@ -70,6 +84,9 @@ const CreateChatroomModal = ({
 
   if (!open) return null;
 
+  /* ----------------------------------------
+   * Render
+   * ---------------------------------------- */
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[9999]">
       <div className="bg-white rounded-xl shadow-2xl w-96 max-h-[80vh] flex flex-col overflow-hidden">
@@ -102,13 +119,11 @@ const CreateChatroomModal = ({
               <Loader2 size={20} className="animate-spin mb-2" />
               Loading users...
             </div>
-          ) : filteredUsers.length === 0 ? (
-            <div className="p-6 text-center text-gray-400">
-              No users found.
-            </div>
+          ) : users.length === 0 ? (
+            <div className="p-6 text-center text-gray-400">No users found.</div>
           ) : (
             <>
-              {filteredUsers.map((user) => {
+              {users.map((user) => {
                 const isSelected = selectedUser?.id === user.id;
                 const fullName = `${user.user_fname || ""} ${
                   user.user_lname || ""
@@ -124,12 +139,12 @@ const CreateChatroomModal = ({
                         : "hover:bg-gray-100"
                     }`}
                   >
-                    <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
                       {user.avatar_url ? (
                         <img
                           src={user.avatar_url}
                           alt="avatar"
-                          className="w-10 h-10 rounded-full object-cover"
+                          className="w-full h-full object-cover"
                         />
                       ) : (
                         <User className="text-gray-500" size={20} />

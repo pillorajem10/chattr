@@ -4,13 +4,15 @@
    Handles:
    - Loading chatrooms and users
    - Opening and creating chatrooms
-   - Sending messages
+   - Real-time chatroom updates via Echo
+   - Sending and receiving messages in real-time
    - Marking conversations as read
    - Snackbar feedback and UI state
 ====================================================== */
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import Cookies from "js-cookie";
+import { echo } from "@utils/echo";
 import actions from "@actions";
 
 export const useLogic = () => {
@@ -102,6 +104,7 @@ export const useLogic = () => {
 
       setMessages(res.data.records);
 
+      // Mark as read immediately when opening
       await actions.message.markConversationAsReadAction(chatroom.id);
       setChatrooms((prev) =>
         prev.map((c) =>
@@ -133,8 +136,23 @@ export const useLogic = () => {
         if (!res.success)
           throw new Error(res.msg || "Failed to create chatroom.");
 
-        const newChatroom = res.data.chatroom;
+        let newChatroom = res.data.chatroom;
 
+        // Determine which user is the receiver
+        const isUserOne = newChatroom.cr_user_one_id === currentUserId;
+        const receiver = isUserOne
+          ? newChatroom.user_two || newChatroom.userTwo
+          : newChatroom.user_one || newChatroom.userOne;
+
+        // Ensure receiver details are embedded for display
+        newChatroom = {
+          ...newChatroom,
+          receiver_name: receiver
+            ? `${receiver.user_fname} ${receiver.user_lname}`
+            : "User",
+        };
+
+        // Add chatroom to list if not existing
         setChatrooms((prev) => {
           const exists = prev.some((c) => c.id === newChatroom.id);
           return exists ? prev : [newChatroom, ...prev];
@@ -147,7 +165,7 @@ export const useLogic = () => {
 
         setSnackbar({
           open: true,
-          message: "Chatroom created successfully.",
+          message: `Chat started with ${newChatroom.receiver_name}.`,
           severity: "success",
         });
       } catch (error) {
@@ -161,77 +179,138 @@ export const useLogic = () => {
         setSending(false);
       }
     },
-    [sending]
+    [sending, currentUserId]
   );
+
+  /* ----------------------------------------
+   * Real-Time Chatroom Events (Echo)
+   * ---------------------------------------- */
+  useEffect(() => {
+    if (!currentUserId) return;
+
+    const channel = echo.private(`chatrooms.${currentUserId}`);
+
+    channel.listen(".chatroom.created", (event) => {
+      const newChatroom = event.chatroom;
+      setChatrooms((prev) => {
+        const exists = prev.some((c) => c.id === newChatroom.id);
+        return exists ? prev : [newChatroom, ...prev];
+      });
+    });
+
+    return () => {
+      echo.leave(`private-chatrooms.${currentUserId}`);
+    };
+  }, [currentUserId]);
+
+  /* ----------------------------------------
+   * Real-Time Message Updates (Echo)
+   * ---------------------------------------- */
+  useEffect(() => {
+    if (!selectedChatroom?.id) return;
+
+    const chatroomId = selectedChatroom.id;
+    const channel = echo.private(`chatroom.${chatroomId}`);
+
+    // Listen for new messages in this chatroom
+    channel.listen(".message.sent", (event) => {
+      setMessages((prev) => [event, ...prev]);
+    });
+
+    // Listen for read receipts
+    channel.listen(".message.read", (event) => {
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.message_sender_id === event.receiver_id
+            ? { ...msg, message_read: true }
+            : msg
+        )
+      );
+    });
+
+    return () => {
+      echo.leave(`private-chatroom.${chatroomId}`);
+    };
+  }, [selectedChatroom?.id]);
 
   /* ----------------------------------------
    * Messaging Operations
    * ---------------------------------------- */
-  const handleSendMessage = useCallback(
-    async () => {
-      if (!messageText.trim() || sending || !selectedChatroom) return;
-      setSending(true);
+  const handleSendMessage = useCallback(async () => {
+    if (!messageText.trim() || sending || !selectedChatroom) return;
+    setSending(true);
 
-      try {
-        const receiverId =
-          selectedChatroom.cr_user_one_id === currentUserId
-            ? selectedChatroom.cr_user_two_id
-            : selectedChatroom.cr_user_one_id;
-
-        const res = await actions.message.sendMessageAction({
-          message_chatroom_id: selectedChatroom.id,
-          message_receiver_id: receiverId,
-          message_content: messageText.trim(),
-        });
-
-        if (!res.success)
-          throw new Error(res.msg || "Failed to send message.");
-
-        setMessages((prev) => [res.data.message, ...prev]);
-        setMessageText("");
-      } catch (error) {
-        console.error("Send Message Error:", error);
-        setSnackbar({
-          open: true,
-          message: "Failed to send message.",
-          severity: "error",
-        });
-      } finally {
-        setSending(false);
-      }
-    },
-    [messageText, selectedChatroom, sending, currentUserId]
-  );
-
-  /* ----------------------------------------
-   * User Operations
-   * ---------------------------------------- */
-  const handleGetUsers = useCallback(async (pageIndex = 1) => {
     try {
-      setLoading(true);
-      const res = await actions.user.fetchUsersAction(pageIndex);
-      if (!res.success) throw new Error(res.msg || "Failed to load users.");
+      const receiverId =
+        selectedChatroom.cr_user_one_id === currentUserId
+          ? selectedChatroom.cr_user_two_id
+          : selectedChatroom.cr_user_one_id;
 
-      setUsers((prev) =>
-        pageIndex === 1 ? res.data.records : [...prev, ...res.data.records]
-      );
-
-      setUserPageDetails({
-        totalRecords: res.data.total_records,
-        pageIndex: res.data.page_index,
-        totalPages: res.data.total_pages,
+      const res = await actions.message.sendMessageAction({
+        message_chatroom_id: selectedChatroom.id,
+        message_receiver_id: receiverId,
+        message_content: messageText.trim(),
       });
+
+      if (!res.success) throw new Error(res.msg || "Failed to send message.");
+
+      setMessages((prev) => [res.data.message, ...prev]);
+      setMessageText("");
     } catch (error) {
-      console.error("User Load Error:", error);
+      console.error("Send Message Error:", error);
       setSnackbar({
         open: true,
-        message: "Failed to load users.",
+        message: "Failed to send message.",
         severity: "error",
       });
     } finally {
-      setLoading(false);
+      setSending(false);
     }
-  }, []);
+  }, [messageText, selectedChatroom, sending, currentUserId]);
+
+  /* ----------------------------------------
+   * User Operations 
+   * ---------------------------------------- */
+  const handleGetUsers = useCallback(
+    async (pageIndex = 1, searchQuery = "") => {
+      try {
+        setLoading(true);
+
+        const params = {
+          pageIndex,
+          pageSize: 500,
+        };
+
+        if (searchQuery.trim()) {
+          params.search = searchQuery.trim();
+        }
+
+        const res = await actions.user.fetchUsersAction(params);
+        if (!res.success) throw new Error(res.msg || "Failed to load users.");
+
+        setUsers((prev) =>
+          pageIndex === 1 ? res.data.records : [...prev, ...res.data.records]
+        );
+
+        setUserPageDetails({
+          totalRecords: res.data.total_records,
+          pageIndex: res.data.page_index,
+          totalPages: res.data.total_pages,
+        });
+      } catch (error) {
+        console.error("User Load Error:", error);
+        setSnackbar({
+          open: true,
+          message: "Failed to load users.",
+          severity: "error",
+        });
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
+
 
   /* ----------------------------------------
    * Snackbar Controls
