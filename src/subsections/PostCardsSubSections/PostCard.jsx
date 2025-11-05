@@ -1,6 +1,6 @@
 import { User } from "lucide-react";
-import PostCardFooter from "@subsections/PostCardsSubsections/PostCardFooter";
-import SharedPostCard from "@subsections/PostCardsSubsections/SharedPostCard";
+import PostCardFooter from "@subsections/PostCardsSubSections/PostCardFooter";
+import SharedPostCard from "@subsections/PostCardsSubSections/SharedPostCard";
 
 /**
  * PostCard Component
