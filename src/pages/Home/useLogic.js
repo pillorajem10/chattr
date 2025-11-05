@@ -467,23 +467,6 @@ export const useLogic = () => {
       }
     });
 
-    channel.listen(".comment.removed", (event) => {
-      const postId = Number(event.comment_post_id || event.post_id);
-      const commentId = Number(event.comment_id);
-      const newCount = Number(event.commentCount ?? 0);
-
-      setPosts((prev) =>
-        prev.map((p) =>
-          p.id === postId ? { ...p, commentsCount: newCount } : p
-        )
-      );
-
-      if (selectedPost?.id === postId) {
-        setSelectedPost((prev) => (prev ? { ...prev, commentsCount: newCount } : prev));
-        setPostComments((prev) => prev.filter((c) => c.id !== commentId));
-      }
-    });
-
     return () => {
       echo.leave("comments");
     };
