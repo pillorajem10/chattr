@@ -69,12 +69,11 @@ Once started, the app will automatically connect to the backend API and WebSocke
 The `.env.example` file includes the following variables:
 
 ```bash
-VITE_API_BASE_URL=http://127.0.0.1:8000/api
 VITE_PUSHER_APP_KEY=local
 VITE_PUSHER_HOST=127.0.0.1
 VITE_PUSHER_PORT=6001
-VITE_PUSHER_SCHEME=http
 VITE_PUSHER_CLUSTER=mt1
+
 ```
 
 > These values ensure seamless communication with the local Laravel backend and WebSocket instance.
