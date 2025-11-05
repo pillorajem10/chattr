@@ -13,7 +13,7 @@
  * ------------------------------------------------------------------
  */
 
-import PostCard from "@subsections/PostCardsSubsections/PostCard";
+import PostCard from "@subsections/PostCardsSubSections/PostCard";
 
 const PostCards = ({
   posts = [],
