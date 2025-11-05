@@ -1,26 +1,37 @@
-/* ===================================================
-   Notifications Drawer Logic Hook
-   ---------------------------------------------------
-   Handles:
-   - Notification fetching and pagination
-   - Infinite scroll for seamless loading
-   - Filter switching (All / Unread)
-   - Mark all or individual notifications as read
-   - Tracks unread count for sidebar badge
-====================================================== */
-
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { echo } from "@utils/echo";
 import actions from "@actions";
 import cookie from "js-cookie";
 
+/**
+ * useLogic Hook
+ * ------------------------------------------------------------
+ * Handles all logic for the NotificationsDrawer component.
+ * Responsibilities include:
+ *  - Fetching and paginating notifications
+ *  - Managing filter state (All / Unread)
+ *  - Infinite scroll pagination
+ *  - Marking notifications as read (single or all)
+ *  - Real-time updates via Laravel Echo
+ *  - Reporting unread count to parent (e.g. Sidebar badge)
+ * ------------------------------------------------------------
+ */
 export const useLogic = (onUnreadCountChange) => {
+  /** ------------------------------------------------------------
+   * Current User
+   * ------------------------------------------------------------ */
   const account = JSON.parse(cookie.get("account") || "{}");
 
+  /** ------------------------------------------------------------
+   * References
+   * ------------------------------------------------------------ */
   const loadingRef = useRef(false);
   const observerRef = useRef(null);
   const loaderRef = useRef(null);
 
+  /** ------------------------------------------------------------
+   * States
+   * ------------------------------------------------------------ */
   const [loading, setLoading] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [filter, setFilter] = useState("all");
@@ -30,13 +41,14 @@ export const useLogic = (onUnreadCountChange) => {
     totalPages: 1,
   });
 
-  /* ----------------------------------------
-   * Fetch Notifications
-   * ---------------------------------------- */
+  /** ------------------------------------------------------------
+   * Fetch Notifications (Initial + Paginated)
+   * ------------------------------------------------------------ */
   const handleNotificationsFetch = useCallback(
     async ({ pageIndex = 1, append = false, customFilter } = {}) => {
       const activeFilter = customFilter || filter;
       if (loadingRef.current) return;
+
       loadingRef.current = true;
       setLoading(true);
 
@@ -61,7 +73,7 @@ export const useLogic = (onUnreadCountChange) => {
           totalPages: response.data.totalPages || 1,
         });
       } catch (error) {
-        console.error("Error fetching notifications:", error);
+        console.error("Notifications Fetch Error:", error);
       } finally {
         loadingRef.current = false;
         setLoading(false);
@@ -70,9 +82,9 @@ export const useLogic = (onUnreadCountChange) => {
     [filter]
   );
 
-  /* ----------------------------------------
-   * Handle Filter Change
-   * ---------------------------------------- */
+  /** ------------------------------------------------------------
+   * Filter Switching (All / Unread)
+   * ------------------------------------------------------------ */
   const handleFilterChange = useCallback(
     async (newFilter) => {
       if (newFilter === filter) return;
@@ -86,9 +98,9 @@ export const useLogic = (onUnreadCountChange) => {
     [filter, handleNotificationsFetch]
   );
 
-  /* ----------------------------------------
-   * Mark All As Read
-   * ---------------------------------------- */
+  /** ------------------------------------------------------------
+   * Mark Notifications as Read
+   * ------------------------------------------------------------ */
   const markAllAsRead = useCallback(async () => {
     try {
       const res = await actions.notification.markAllNotificationsAsReadAction();
@@ -98,13 +110,10 @@ export const useLogic = (onUnreadCountChange) => {
         );
       }
     } catch (err) {
-      console.error("Failed to mark all as read:", err);
+      console.error("Mark All As Read Error:", err);
     }
   }, []);
 
-  /* ----------------------------------------
-   * Mark Single Notification As Read
-   * ---------------------------------------- */
   const markAsRead = useCallback(async (notificationId) => {
     try {
       const res = await actions.notification.markNotificationAsReadAction(
@@ -118,13 +127,13 @@ export const useLogic = (onUnreadCountChange) => {
         );
       }
     } catch (err) {
-      console.error("Failed to mark notification as read:", err);
+      console.error("Mark Single Notification Error:", err);
     }
   }, []);
 
-  /* ----------------------------------------
-   * Derived State (computed values)
-   * ---------------------------------------- */
+  /** ------------------------------------------------------------
+   * Derived State (Computed)
+   * ------------------------------------------------------------ */
   const allRead = useMemo(
     () => notifications.every((n) => n.notification_read),
     [notifications]
@@ -135,34 +144,32 @@ export const useLogic = (onUnreadCountChange) => {
     [notifications]
   );
 
-  /* ----------------------------------------
-  * Real-Time Notifications (Laravel Echo)
-  * ---------------------------------------- */
+  /** ------------------------------------------------------------
+   * Real-Time Notifications (Laravel Echo)
+   * ------------------------------------------------------------ */
   useEffect(() => {
     const channel = echo.private(`notifications.${account.id}`);
 
-    // Handle new notifications
     channel.listen(".notification.created", (event) => {
-      const newNotif = event.notification;
-      setNotifications((prev) => [newNotif, ...prev]);
+      const newNotification = event.notification;
+      setNotifications((prev) => [newNotification, ...prev]);
     });
 
     return () => {
       echo.leave(`private-notifications.${account.id}`);
     };
-  }, []);
+  }, [account.id]);
 
-
-  /* ----------------------------------------
-   * Notify parent (e.g. sidebar) when unread count changes
-   * ---------------------------------------- */
+  /** ------------------------------------------------------------
+   * Notify Parent on Unread Count Change
+   * ------------------------------------------------------------ */
   useEffect(() => {
     if (onUnreadCountChange) onUnreadCountChange(unreadCount);
   }, [unreadCount, onUnreadCountChange]);
 
-  /* ----------------------------------------
-   * Infinite Scroll
-   * ---------------------------------------- */
+  /** ------------------------------------------------------------
+   * Infinite Scroll Pagination
+   * ------------------------------------------------------------ */
   useEffect(() => {
     if (!loaderRef.current) return;
 
@@ -188,16 +195,16 @@ export const useLogic = (onUnreadCountChange) => {
     return () => observerRef.current?.unobserve(currentLoader);
   }, [handleNotificationsFetch, pageDetails, loading]);
 
-  /* ----------------------------------------
+  /** ------------------------------------------------------------
    * Initial Fetch
-   * ---------------------------------------- */
+   * ------------------------------------------------------------ */
   useEffect(() => {
     handleNotificationsFetch({ pageIndex: 1 });
   }, [filter, handleNotificationsFetch]);
 
-  /* ----------------------------------------
-   * Expose to Component
-   * ---------------------------------------- */
+  /** ------------------------------------------------------------
+   * Return Public API
+   * ------------------------------------------------------------ */
   return {
     loading,
     notifications,

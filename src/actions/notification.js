@@ -1,14 +1,17 @@
 // services api
 import { 
-    fetchNotificationsService, 
-    markNotificationAsReadService, 
-    markAllNotificationsAsReadService 
+  fetchNotificationsService, 
+  markNotificationAsReadService, 
+  markAllNotificationsAsReadService 
 } from "@services/api/notifications";
 
 /*===============================
-        NOTIFICATIONS ACTIONS
+      NOTIFICATIONS ACTIONS
 ================================*/
 
+/**
+ * Fetch user notifications
+ */
 export const fetchNotificationsAction = async (userId) => {
   try {
     const res = await fetchNotificationsService(userId);
@@ -18,6 +21,9 @@ export const fetchNotificationsAction = async (userId) => {
   }
 };
 
+/**
+ * Mark a single notification as read
+ */
 export const markNotificationAsReadAction = async (notificationId) => {
   try {
     const res = await markNotificationAsReadService(notificationId);
@@ -27,6 +33,9 @@ export const markNotificationAsReadAction = async (notificationId) => {
   }
 };
 
+/**
+ * Mark all notifications as read
+ */
 export const markAllNotificationsAsReadAction = async () => {
   try {
     const res = await markAllNotificationsAsReadService();

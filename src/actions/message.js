@@ -11,6 +11,9 @@ import {
         MESSAGES ACTIONS
 ================================*/
 
+/**
+ * Get user chatrooms
+ */
 export const getUserChatroomsAction = async (payload) => {
   try {
     const res = await getUserChatroomsService(payload);
@@ -20,6 +23,9 @@ export const getUserChatroomsAction = async (payload) => {
   }
 };
 
+/**
+ * Get conversation messages
+ */
 export const getConversationAction = async (chatroomId) => {
   try {
     const res = await getConversationService(chatroomId);
@@ -29,6 +35,9 @@ export const getConversationAction = async (chatroomId) => {
   }
 };
 
+/**
+ * Send message
+ */
 export const sendMessageAction = async (payload) => {
   try {
     const res = await sendMessageService(payload);
@@ -38,6 +47,9 @@ export const sendMessageAction = async (payload) => {
   }
 };
 
+/**
+ * Mark conversation as read
+ */
 export const markConversationAsReadAction = async (chatroomId) => {
   try {
     const res = await markConversationAsReadService(chatroomId);
@@ -47,6 +59,9 @@ export const markConversationAsReadAction = async (chatroomId) => {
   }
 };
 
+/**
+ * Create new chatroom
+ */
 export const createChatroomAction = async (payload) => {
   try {
     const res = await createChatroomService(payload);

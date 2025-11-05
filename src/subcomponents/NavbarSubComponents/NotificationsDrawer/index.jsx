@@ -1,6 +1,19 @@
 import { X, CheckCheck, Check } from "lucide-react";
 import { useLogic } from "./useLogic";
 
+/**
+ * NotificationsDrawer Component
+ * ------------------------------------------------------------------
+ * Parent Component: Navbar
+ *
+ * Displays a slide-in drawer for viewing, filtering, and marking
+ * notifications as read. Includes:
+ *  - Infinite scroll for notification pagination
+ *  - "All" and "Unread" filter tabs
+ *  - Real-time unread count updates synced with Navbar badge
+ *  - Smooth open/close transitions with backdrop overlay
+ * ------------------------------------------------------------------
+ */
 const NotificationsDrawer = ({
   open,
   onClose,

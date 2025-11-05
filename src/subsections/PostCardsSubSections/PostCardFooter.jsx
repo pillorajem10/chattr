@@ -2,12 +2,18 @@ import { useState, useEffect } from "react";
 import { Heart, MessageCircle, Share2 } from "lucide-react";
 
 /**
- * PostCardFooter
- * --------------------------------------------------
- * Handles user interactions for reactions (like/unlike),
- * opening comments, and sharing posts.
- * Provides local optimistic UI updates while syncing with
- * backend state and real-time broadcasts.
+ * PostCardFooter Component
+ * ------------------------------------------------------------------
+ * Parent Section: PostCard  (Section: PostCards)
+ *
+ * Handles user engagement interactions for each post:
+ *  - Like / Unlike with optimistic UI updates
+ *  - Open detailed post view (comments)
+ *  - Trigger share modal for reposting
+ *
+ * Keeps UI state synchronized with backend updates and
+ * real-time events from other users.
+ * ------------------------------------------------------------------
  */
 const PostCardFooter = ({
   postId,
@@ -21,21 +27,24 @@ const PostCardFooter = ({
   onOpenPostDetails,
   onShare,
 }) => {
-  // Local state for real-time and optimistic UI behavior
+  /* ------------------------------------------------------------
+   * Local state — for optimistic UI and real-time updates
+   * ------------------------------------------------------------ */
   const [liked, setLiked] = useState(isLiked);
   const [localLikes, setLocalLikes] = useState(likesCount);
   const [localReactionId, setLocalReactionId] = useState(reactionId);
 
-  // Keep component state synchronized with parent updates
+  /* ------------------------------------------------------------
+   * Sync local state when parent props update
+   * ------------------------------------------------------------ */
   useEffect(() => setLiked(isLiked), [isLiked]);
   useEffect(() => setLocalLikes(likesCount), [likesCount]);
   useEffect(() => setLocalReactionId(reactionId), [reactionId]);
 
-  /**
-   * Handle Like/Unlike Button Click
-   * Updates local UI immediately, triggers backend requests,
-   * and maintains the latest reaction ID for future actions.
-   */
+  /* ------------------------------------------------------------
+   * Handle Like / Unlike Button Click
+   * Performs instant UI updates while syncing to backend
+   * ------------------------------------------------------------ */
   const handleLikeClick = async () => {
     console.log(
       `[Post ${postId}] Like button clicked | liked: ${liked}, reactionId: ${localReactionId}`
@@ -59,19 +68,22 @@ const PostCardFooter = ({
 
       const response = await onLike?.(postId);
 
-      // Store the newly created reaction ID for subsequent actions
+      // Store the newly created reaction ID
       if (response?.success && response?.data?.id) {
-        console.log(
-          `[Post ${postId}] Received new reaction ID: ${response.data.id}`
-        );
+        console.log(`[Post ${postId}] Received new reaction ID: ${response.data.id}`);
         setLocalReactionId(response.data.id);
       }
     }
   };
 
+  /* ------------------------------------------------------------
+   * Render Footer Buttons — Like, Comment, Share
+   * ------------------------------------------------------------ */
   return (
     <div className="flex justify-between items-center mt-8 text-gray-500">
-      {/* Like Button */}
+      {/* ------------------------------------------------------------
+           Like Button
+         ------------------------------------------------------------ */}
       <button
         onClick={handleLikeClick}
         className={`flex items-center gap-2 transition-colors ${
@@ -86,7 +98,9 @@ const PostCardFooter = ({
         <span className="text-sm">{localLikes > 0 ? localLikes : ""}</span>
       </button>
 
-      {/* Comment Button */}
+      {/* ------------------------------------------------------------
+           Comment Button
+         ------------------------------------------------------------ */}
       <button
         onClick={() => onOpenPostDetails(postId)}
         className="flex items-center gap-2 hover:text-blue-500 transition-colors"
@@ -95,7 +109,9 @@ const PostCardFooter = ({
         <span className="text-sm">{commentCount > 0 ? commentCount : ""}</span>
       </button>
 
-      {/* Share Button */}
+      {/* ------------------------------------------------------------
+           Share Button
+         ------------------------------------------------------------ */}
       <button
         onClick={() => onShare(postId)}
         className="flex items-center gap-2 hover:text-green-500 transition-colors"

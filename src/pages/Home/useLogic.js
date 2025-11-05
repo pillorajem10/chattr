@@ -12,7 +12,6 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import actions from "@actions";
 import { echo } from "@utils/echo";
 import { usePostModal } from "@contexts/PostModalContext";
-import Cookies from "js-cookie";
 
 export const useLogic = () => {
   /* ----------------------------------------
@@ -20,7 +19,7 @@ export const useLogic = () => {
    * ---------------------------------------- */
   const loadingRef = useRef(false);
   const observerRef = useRef(null);
-  const loaderRef = useRef(null);   
+  const loaderRef = useRef(null);
   const { closeCreatePostModal } = usePostModal();
 
   /* ----------------------------------------
@@ -68,9 +67,7 @@ export const useLogic = () => {
 
         const newRecords = response.data.records || [];
 
-        setPosts((prev) =>
-          append ? [...prev, ...newRecords] : newRecords
-        );
+        setPosts((prev) => (append ? [...prev, ...newRecords] : newRecords));
 
         setPageDetails({
           totalRecords: response.data.totalRecords || 0,
@@ -93,12 +90,10 @@ export const useLogic = () => {
   );
 
   /* ----------------------------------------
-  * Like Post
-  * Optimistic UI update with backend sync
-  * ---------------------------------------- */
+   * Like Post (optimistic)
+   * ---------------------------------------- */
   const handleLikePost = useCallback(async (postId) => {
     try {
-      // Optimistically mark the post as liked and increment count
       setPosts((prev) =>
         prev.map((post) =>
           post.id === postId
@@ -107,21 +102,18 @@ export const useLogic = () => {
         )
       );
 
-      // Send request to backend to register the like
       const response = await actions.reaction.reactToPostAction(postId);
       if (!response.success) throw new Error(response.msg);
 
-      // Update post with new reaction ID returned by backend
       const reactionId = response?.data?.id;
       if (reactionId) {
         setPosts((prev) =>
           prev.map((post) =>
-            post.id === postId ? { ...post, reactionId } : post
+            post.id === postId ? { ...post, user_reaction_id: reactionId } : post
           )
         );
       }
 
-      // Return full response for component-level handling
       return response;
     } catch (error) {
       console.error("Like Post Error:", error);
@@ -130,9 +122,8 @@ export const useLogic = () => {
   }, []);
 
   /* ----------------------------------------
-  * Remove Like
-  * Optimistic UI update with backend sync
-  * ---------------------------------------- */
+   * Remove Like (optimistic)
+   * ---------------------------------------- */
   const handleRemoveLikePost = useCallback(async (reactionId, postId) => {
     try {
       if (!reactionId) {
@@ -140,7 +131,6 @@ export const useLogic = () => {
         return;
       }
 
-      // Optimistically mark the post as unliked and decrement count
       setPosts((prev) =>
         prev.map((post) =>
           post.id === postId
@@ -153,11 +143,10 @@ export const useLogic = () => {
         )
       );
 
-      // Send request to backend to remove the reaction
       const response = await actions.reaction.removeReactFromPostAction(reactionId);
 
-      // Revert optimistic update if request fails
       if (!response.success) {
+        // revert
         setPosts((prev) =>
           prev.map((post) =>
             post.id === postId
@@ -172,10 +161,10 @@ export const useLogic = () => {
         throw new Error(response.msg || "Failed to remove like.");
       }
 
-      // Clear reaction ID after successful removal
+      // clear user_reaction_id
       setPosts((prev) =>
         prev.map((post) =>
-          post.id === postId ? { ...post, reactionId: null } : post
+          post.id === postId ? { ...post, user_reaction_id: null } : post
         )
       );
     } catch (error) {
@@ -208,34 +197,31 @@ export const useLogic = () => {
           });
         }
       },
-      {
-        rootMargin: "800px 0px 800px 0px",
-        threshold: 0.1,
-      }
+      { rootMargin: "800px 0px 800px 0px", threshold: 0.1 }
     );
 
     const currentLoader = loaderRef.current;
     observerRef.current.observe(currentLoader);
 
-    return () => observerRef.current?.unobserve(currentLoader);
+    return () => {
+      if (observerRef.current && currentLoader) {
+        observerRef.current.unobserve(currentLoader);
+      }
+    };
   }, [handlePostsFetch, pageDetails, loading]);
 
   /* ----------------------------------------
-  * Fetch post details
-  * Triggers post details modal
-  * Open Post Details Modal
-  * ---------------------------------------- */
+   * Open Post Details (loads comments if needed)
+   * ---------------------------------------- */
   const handleOpenPostDetails = useCallback(async (postId) => {
     try {
       const response = await actions.post.fetchPostDetailAction(postId);
-
       if (!response.success) throw new Error(response.msg || "Failed to fetch post details.");
 
       const postData = response.data;
       setSelectedPost(postData);
       setShowPostDetailsModal(true);
 
-      // Fetch comments separately only if not already included
       if (!postData.comments) {
         const commentsResponse = await actions.comment.fetchCommentsByPostAction(postId, { pageIndex: 1 });
         if (commentsResponse.success) {
@@ -252,21 +238,18 @@ export const useLogic = () => {
         severity: "error",
       });
     }
-  }, [selectedPost]);
+  }, []);
 
   /* ----------------------------------------
-  * Handle Open Share Modal
-  * Fetches post details for sharing
-  * ---------------------------------------- */
+   * Share Modal open/close
+   * ---------------------------------------- */
   const handleOpenShareModal = useCallback(async (postId) => {
     try {
       const response = await actions.post.fetchPostDetailAction(postId);
-
       if (!response.success)
         throw new Error(response.msg || "Failed to fetch post details for sharing.");
 
-      const postData = response.data;
-      setSelectedPost(postData);
+      setSelectedPost(response.data);
       setShowShareModal(true);
     } catch (error) {
       console.error("Open Share Modal Error:", error);
@@ -278,17 +261,14 @@ export const useLogic = () => {
     }
   }, []);
 
-  /* ----------------------------------------
-  * Close Share Modal
-  * ---------------------------------------- */
   const handleCloseShareModal = useCallback(() => {
     setShowShareModal(false);
     setSelectedPost(null);
   }, []);
 
   /* ----------------------------------------
-  * Close Post Details Modal
-  * ---------------------------------------- */
+   * Close Post Details Modal
+   * ---------------------------------------- */
   const handleClosePostDetails = useCallback(() => {
     setShowPostDetailsModal(false);
     setSelectedPost(null);
@@ -296,55 +276,45 @@ export const useLogic = () => {
   }, []);
 
   /* ----------------------------------------
-  * Handle Comment Input Change
-  * ---------------------------------------- */
+   * Inputs change handlers
+   * ---------------------------------------- */
   const handleCommentInputChange = (e) => {
     const { name, value } = e.target;
     setCommentFormValues((prev) => ({ ...prev, [name]: value }));
   };
 
-  /* ----------------------------------------
-  * Handle Post Input Change
-  * ---------------------------------------- */
   const handlePostInputChange = (e) => {
     const { name, value } = e.target;
     setFormValues((prev) => ({ ...prev, [name]: value }));
   };
 
-  /* ----------------------------------------
-  * Handle Share Input Change
-  * ---------------------------------------- */
   const handleShareInputChange = (e) => {
     const { name, value } = e.target;
     setShareFormValues((prev) => ({ ...prev, [name]: value }));
   };
 
   /* ----------------------------------------
-  * Handle Submit Comment
-  * ---------------------------------------- */
+   * Submit Comment
+   * ---------------------------------------- */
   const handleSubmitComment = useCallback(
     async (e) => {
       e.preventDefault();
       if (!selectedPost) return;
 
       try {
-        const response = await actions.comment.commentToPostAction(
-          selectedPost.id,
-          { comment_content: commentFormValues.comment_content }
-        );
+        const response = await actions.comment.commentToPostAction(selectedPost.id, {
+          comment_content: commentFormValues.comment_content,
+        });
 
         if (!response.success)
           throw new Error(response.msg || "Failed to submit comment.");
 
-        // Clear input
         setCommentFormValues({ comment_content: "" });
 
-        // Refresh comments
         const commentsResponse = await actions.comment.fetchCommentsByPostAction(
           selectedPost.id,
           { pageIndex: 1 }
         );
-
         if (commentsResponse.success) {
           setPostComments(commentsResponse.data || []);
         }
@@ -357,130 +327,122 @@ export const useLogic = () => {
         });
       }
     },
-    [
-      selectedPost,
-      commentFormValues.comment_content,
-    ]
+    [selectedPost, commentFormValues.comment_content]
   );
 
   /* ----------------------------------------
-  * Handle Submit Post
-  * ---------------------------------------- */
- const handleSubmitPost = useCallback(async (e) => {
-    e.preventDefault();
-    
-    if (loadingRef.current) return;
-    loadingRef.current = true;
-    setLoading(true);
+   * Submit Post
+   * ---------------------------------------- */
+  const handleSubmitPost = useCallback(
+    async (e) => {
+      e.preventDefault();
 
-    try {
-      const response = await actions.post.createPostAction(formValues);
+      if (loadingRef.current) return;
+      loadingRef.current = true;
+      setLoading(true);
 
-      if (!response.success)
-        throw new Error(response.msg || "Failed to create post.");
+      try {
+        const response = await actions.post.createPostAction(formValues);
 
-      // Clear form
-      setFormValues({ post_content: "" });
-      setSnackbar({
-        open: true,
-        message: "Post created successfully!",
-        severity: "success",
-      });
+        if (!response.success)
+          throw new Error(response.msg || "Failed to create post.");
 
-      closeCreatePostModal();
-    
-      // Refresh posts
-      await handlePostsFetch({ pageIndex: 1 });
-    } catch (error) {
-      console.error("Create Post Error:", error);
-      setSnackbar({
-        open: true,
-        message: error.message || "An unexpected error occurred.",
-        severity: "error",
-      });
-    } finally {
-      loadingRef.current = false;
-      setLoading(false);
-    }
- }, [formValues]);
+        setFormValues({ post_content: "" });
+        setSnackbar({
+          open: true,
+          message: "Post created successfully!",
+          severity: "success",
+        });
 
-  /* ----------------------------------------
-  * Handle Submit Share
-  * ---------------------------------------- */
- const handleSubmitShare = useCallback(async (e) => {
-    e.preventDefault();
+        closeCreatePostModal();
 
-    if (loadingRef.current) return;
-    loadingRef.current = true;
-    setLoading(true);
-
-    try {
-      const response = await actions.share.sharePostAction(
-        selectedPost.id,
-        shareFormValues
-      );
-      if (!response.success)
-        throw new Error(response.msg || "Failed to share post.");
-
-      
-      setShareFormValues({ share_caption: "" });
-
-      setSnackbar({
-        open: true,
-        message: "Post shared successfully!",
-        severity: "success",
-      });
-
-      handleCloseShareModal();
-
-      await handlePostsFetch({ pageIndex: 1 });
-    } catch (error) {
-      console.error("Share Post Error:", error);
-
-      setSnackbar({
-        open: true,
-        message: error.message || "An unexpected error occurred.",
-        severity: "error",
-      });
-    } finally {
-      loadingRef.current = false;
-      setLoading(false);
-    }
-  }, [shareFormValues, selectedPost, handleCloseShareModal]);
+        await handlePostsFetch({ pageIndex: 1 });
+      } catch (error) {
+        console.error("Create Post Error:", error);
+        setSnackbar({
+          open: true,
+          message: error.message || "An unexpected error occurred.",
+          severity: "error",
+        });
+      } finally {
+        loadingRef.current = false;
+        setLoading(false);
+      }
+    },
+    [formValues, handlePostsFetch, closeCreatePostModal]
+  );
 
   /* ----------------------------------------
-   * Real-time Updates via Echo
-   * Listens for like/unlike events
+   * Submit Share
+   * ---------------------------------------- */
+  const handleSubmitShare = useCallback(
+    async (e) => {
+      e.preventDefault();
+
+      if (loadingRef.current) return;
+      loadingRef.current = true;
+      setLoading(true);
+
+      try {
+        const response = await actions.share.sharePostAction(
+          selectedPost.id,
+          shareFormValues
+        );
+        if (!response.success)
+          throw new Error(response.msg || "Failed to share post.");
+
+        setShareFormValues({ share_caption: "" });
+
+        setSnackbar({
+          open: true,
+          message: "Post shared successfully!",
+          severity: "success",
+        });
+
+        handleCloseShareModal();
+
+        await handlePostsFetch({ pageIndex: 1 });
+      } catch (error) {
+        console.error("Share Post Error:", error);
+        setSnackbar({
+          open: true,
+          message: error.message || "An unexpected error occurred.",
+          severity: "error",
+        });
+      } finally {
+        loadingRef.current = false;
+        setLoading(false);
+      }
+    },
+    [shareFormValues, selectedPost, handleCloseShareModal, handlePostsFetch]
+  );
+
+  /* ----------------------------------------
+   * Real-time Updates via Echo (likes)
    * ---------------------------------------- */
   useEffect(() => {
-    // Subscribe to public "reactions" channel
     const channel = echo.channel("reactions");
 
-    // When someone likes a post
     channel.listen(".reaction.created", (event) => {
       const payload = event.reaction || event;
       const postId = Number(payload.post_id || payload.reaction_post_id);
       const count = payload.likesCount;
 
-      // Update the specific post's like count
       setPosts((prev) =>
         prev.map((p) => (p.id === postId ? { ...p, likesCount: count } : p))
       );
     });
 
-    // When someone unlikes a post
     channel.listen(".reaction.removed", (event) => {
       const payload = event.reaction || event;
       const postId = Number(payload.post_id || payload.reaction_post_id);
       const count = payload.likesCount;
 
-      // Update the specific post's like count
       setPosts((prev) =>
         prev.map((p) => (p.id === postId ? { ...p, likesCount: count } : p))
       );
     });
 
-    // Leave channel on component unmount
     return () => {
       echo.leave("reactions");
     };
@@ -506,9 +468,10 @@ export const useLogic = () => {
     loaderRef,
     postComments,
     selectedPost,
-    showShareModal, 
+    showShareModal,
     shareFormValues,
     showPostDetailsModal,
+    handlePostsFetch,
     handleSubmitComment,
     handleLikePost,
     handleRemoveLikePost,

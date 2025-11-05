@@ -7,9 +7,12 @@ import {
 } from "@services/api/posts";
 
 /*===============================
-         POSTS ACTIONS
-=================================*/
+          POSTS ACTIONS
+================================*/
 
+/**
+ * Fetch posts
+ */
 export const fetchPostsAction = async (payload) => {
   try {
     const res = await fetchPostsService(payload);
@@ -19,6 +22,9 @@ export const fetchPostsAction = async (payload) => {
   }
 };
 
+/**
+ * Create post
+ */
 export const createPostAction = async (payload) => {
   try {
     const res = await createPostService(payload);
@@ -28,6 +34,9 @@ export const createPostAction = async (payload) => {
   }
 };
 
+/**
+ * Fetch post detail
+ */
 export const fetchPostDetailAction = async (postId) => {
   try {
     const res = await fetchPostDetailService(postId);
@@ -37,6 +46,9 @@ export const fetchPostDetailAction = async (postId) => {
   }
 };
 
+/**
+ * Delete post
+ */
 export const deletePostAction = async (postId) => {
   try {
     const res = await deletePostService(postId);

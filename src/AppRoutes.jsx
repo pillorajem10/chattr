@@ -16,9 +16,31 @@ import NonAuthRouter from "@routers/NonAuthRouter";
 // context
 import { PostModalProvider } from "@contexts/PostModalContext";
 
+/**
+ * AppRoutes Configuration
+ * ------------------------------------------------------------------
+ * File: AppRoutes.jsx
+ *
+ * Centralized route configuration for the application.
+ * Handles route segmentation for both authenticated and
+ * non-authenticated users.
+ *
+ * Includes:
+ *  - Public routes for Login and Register (wrapped in NonAuthRouter)
+ *  - Protected routes under MainLayout (wrapped in AuthRouter)
+ *  - Context provider (PostModalProvider) scoped to authenticated views
+ *  - Default 404 fallback route
+ *
+ * Layout:
+ *  - MainLayout → includes navbar, sidebar, and nested pages
+ *  - Each route defined via React Router v6 structure
+ * ------------------------------------------------------------------
+ */
 const AppRoutes = () => (
   <Routes>
-    {/* Non-Authenticated Routes */}
+    {/* ------------------------------------------------------------
+         Non-Authenticated Routes (Login, Register)
+       ------------------------------------------------------------ */}
     {[
       { path: "/login", element: <Login /> },
       { path: "/register", element: <Register /> },
@@ -30,7 +52,9 @@ const AppRoutes = () => (
       />
     ))}
 
-    {/* Authenticated Routes */}
+    {/* ------------------------------------------------------------
+         Authenticated Routes (Requires Auth)
+       ------------------------------------------------------------ */}
     <Route
       path="/"
       element={
@@ -44,7 +68,9 @@ const AppRoutes = () => (
       <Route index element={<Home />} />
     </Route>
 
-    {/* 404 Fallback */}
+    {/* ------------------------------------------------------------
+         Fallback Route — 404 Page
+       ------------------------------------------------------------ */}
     <Route path="*" element={<Default />} />
   </Routes>
 );

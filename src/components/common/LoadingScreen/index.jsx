@@ -1,5 +1,13 @@
 import styles from "./index.module.css";
 
+/**
+ * LoadingScreen Component
+ * ------------------------------------------------------------------
+ * Displays a full-screen overlay with a centered loading spinner.
+ * Used during async operations or page transitions to indicate
+ * that content is currently being loaded.
+ * ------------------------------------------------------------------
+ */
 const LoadingScreen = () => {
   return (
     <div

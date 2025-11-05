@@ -1,10 +1,23 @@
 import { X, User } from "lucide-react";
 
+/**
+ * ShareModal Component
+ * ------------------------------------------------------------------
+ * Displays a modal allowing users to share an existing post with
+ * an optional caption. Includes:
+ *  - Preview of the original post and author
+ *  - Textarea for the user’s share caption
+ *  - Submit and close controls with loading state
+ *
+ * Designed to encourage engagement while preserving context
+ * of the original post.
+ * ------------------------------------------------------------------
+ */
 const ShareModal = ({
   open,
   onClose,
-  post,        
-  formValues,  
+  post,
+  formValues,
   onChange,
   onSubmit,
   isSubmitting = false,
@@ -14,7 +27,10 @@ const ShareModal = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <div className="bg-white rounded-xl shadow-lg w-full max-w-lg overflow-hidden">
-        {/* Header */}
+
+        {/* ------------------------------------------------------------
+             Header — Title and Close Button
+           ------------------------------------------------------------ */}
         <div className="flex items-center justify-between px-5 py-3 border-b">
           <h2 className="text-lg font-semibold text-gray-800">Share Post</h2>
           <button
@@ -25,7 +41,9 @@ const ShareModal = ({
           </button>
         </div>
 
-        {/* Original Post Preview */}
+        {/* ------------------------------------------------------------
+             Original Post Preview
+           ------------------------------------------------------------ */}
         <div className="px-5 py-4 border-b bg-gray-50">
           <div className="flex items-center gap-3 mb-2">
             <div className="bg-gray-200 rounded-full p-2">
@@ -40,13 +58,15 @@ const ShareModal = ({
           </p>
         </div>
 
-        {/* Share Form */}
+        {/* ------------------------------------------------------------
+             Share Form — Caption Input and Submit
+           ------------------------------------------------------------ */}
         <form onSubmit={onSubmit} className="p-5 flex flex-col gap-4">
           <textarea
             name="share_caption"
             value={formValues.share_caption || ""}
             onChange={onChange}
-            placeholder="What's would you like to say?"
+            placeholder="What would you like to say?"
             rows={4}
             className="w-full resize-none border rounded-lg px-4 py-3 text-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-gray-400 disabled:opacity-50"
             disabled={isSubmitting}

@@ -1,5 +1,17 @@
 import { X } from "lucide-react";
 
+/**
+ * CreatePostModal Component
+ * ------------------------------------------------------------------
+ * A centered modal for composing and submitting a new post.
+ * Includes:
+ *  - Textarea input for post content
+ *  - Submit button with loading state
+ *  - Close button for dismissing the modal
+ *
+ * The modal is controlled externally through `open` and form handlers.
+ * ------------------------------------------------------------------
+ */
 const CreatePostModal = ({
   open,
   onClose,
@@ -13,7 +25,9 @@ const CreatePostModal = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <div className="bg-white rounded-xl shadow-lg w-full max-w-lg overflow-hidden">
-        {/* Header */}
+        {/* ------------------------------------------------------------
+             Header — Title and Close Button
+           ------------------------------------------------------------ */}
         <div className="flex items-center justify-between px-5 py-3 border-b">
           <h2 className="text-lg font-semibold text-gray-800">Create Post</h2>
           <button
@@ -25,7 +39,9 @@ const CreatePostModal = ({
           </button>
         </div>
 
-        {/* Form */}
+        {/* ------------------------------------------------------------
+             Form — Post Input and Submit
+           ------------------------------------------------------------ */}
         <form onSubmit={onSubmit} className="p-5 flex flex-col gap-4">
           <textarea
             name="post_content"

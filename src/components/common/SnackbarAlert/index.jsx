@@ -3,8 +3,11 @@ import styles from "./index.module.css"; // Scoped animation styles
 
 /**
  * Snackbar Component
- * Displays a temporary success or error message centered at the bottom of the screen.
- * Auto-closes after 3 seconds with a slide-up animation.
+ * ------------------------------------------------------------------
+ * Displays a temporary message at the bottom center of the screen.
+ * Supports two states: success or error.
+ * Automatically disappears after 3 seconds with a slide-up animation.
+ * ------------------------------------------------------------------
  */
 const Snackbar = ({ message, severity = "success", onClose }) => {
   useEffect(() => {

@@ -1,10 +1,22 @@
 // logics 
-import { useLogic } from './useLogic';
+import { useLogic } from "./useLogic";
 
 // components
-import LoadingScreen from '@components/common/LoadingScreen';
-import SnackbarAlert from '@components/common/SnackbarAlert';
+import LoadingScreen from "@components/common/LoadingScreen";
+import SnackbarAlert from "@components/common/SnackbarAlert";
 
+/**
+ * Register Component
+ * ------------------------------------------------------------------
+ * Handles user registration and account creation.
+ * Includes:
+ *  - Input fields for personal details and credentials
+ *  - Form submission handled by `useLogic`
+ *  - Loading state and Snackbar feedback for errors or success
+ *
+ * Serves as the main entry point for new users joining the app.
+ * ------------------------------------------------------------------
+ */
 const Register = () => {
   const {
     loading,
@@ -19,14 +31,20 @@ const Register = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      {/* Register Container */}
+      {/* ------------------------------------------------------------
+           Register Card
+         ------------------------------------------------------------ */}
       <div className="w-full max-w-sm bg-white border border-gray-200 rounded-lg shadow-md p-8">
-        {/* Brand */}
+        {/* ------------------------------------------------------------
+             Brand
+           ------------------------------------------------------------ */}
         <h1 className="text-4xl font-semibold text-center mb-8 text-gray-800">
           Chattr
         </h1>
 
-        {/* Form */}
+        {/* ------------------------------------------------------------
+             Registration Form
+           ------------------------------------------------------------ */}
         <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
           <input
             type="text"
@@ -69,14 +87,18 @@ const Register = () => {
           </button>
         </form>
 
-        {/* Divider */}
+        {/* ------------------------------------------------------------
+             Divider
+           ------------------------------------------------------------ */}
         <div className="flex items-center my-6">
           <div className="flex-1 h-px bg-gray-200"></div>
           <span className="px-3 text-gray-400 text-sm font-medium">OR</span>
           <div className="flex-1 h-px bg-gray-200"></div>
         </div>
 
-        {/* Log In link */}
+        {/* ------------------------------------------------------------
+             Login Redirect
+           ------------------------------------------------------------ */}
         <p className="text-center text-sm text-gray-600">
           Already have an account?{" "}
           <a
@@ -87,7 +109,9 @@ const Register = () => {
           </a>
         </p>
 
-        {/* Snackbar Alert */}
+        {/* ------------------------------------------------------------
+             Snackbar Notification
+           ------------------------------------------------------------ */}
         {snackbar.open && (
           <SnackbarAlert
             open={snackbar.open}

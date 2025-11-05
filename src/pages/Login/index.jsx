@@ -1,10 +1,22 @@
 // logics 
-import { useLogic } from './useLogic';
+import { useLogic } from "./useLogic";
 
 // components
-import LoadingScreen from '@components/common/LoadingScreen';
-import SnackbarAlert from '@components/common/SnackbarAlert';
+import LoadingScreen from "@components/common/LoadingScreen";
+import SnackbarAlert from "@components/common/SnackbarAlert";
 
+/**
+ * Login Component
+ * ------------------------------------------------------------------
+ * Renders the login interface for user authentication.
+ * Handles:
+ *  - Email/username and password input
+ *  - Submission via `useLogic` for API handling
+ *  - Loading state and error feedback through Snackbar
+ *
+ * Acts as the main entry point for existing users.
+ * ------------------------------------------------------------------
+ */
 const Login = () => {
   const {
     loading,
@@ -19,14 +31,20 @@ const Login = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      {/* Login Container */}
+      {/* ------------------------------------------------------------
+           Login Card
+         ------------------------------------------------------------ */}
       <div className="w-full max-w-sm bg-white border border-gray-200 rounded-lg shadow-md p-8">
-        {/* Brand */}
+        {/* ------------------------------------------------------------
+             Brand
+           ------------------------------------------------------------ */}
         <h1 className="text-4xl font-semibold text-center mb-8 text-gray-800">
           Chattr
         </h1>
 
-        {/* Form */}
+        {/* ------------------------------------------------------------
+             Login Form
+           ------------------------------------------------------------ */}
         <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
           <input
             type="text"
@@ -53,14 +71,18 @@ const Login = () => {
           </button>
         </form>
 
-        {/* Divider */}
+        {/* ------------------------------------------------------------
+             Divider
+           ------------------------------------------------------------ */}
         <div className="flex items-center my-6">
           <div className="flex-1 h-px bg-gray-200"></div>
           <span className="px-3 text-gray-400 text-sm font-medium">OR</span>
           <div className="flex-1 h-px bg-gray-200"></div>
         </div>
 
-        {/* Sign Up */}
+        {/* ------------------------------------------------------------
+             Registration Link
+           ------------------------------------------------------------ */}
         <p className="text-center text-sm text-gray-600">
           Don’t have an account?{" "}
           <a
@@ -71,7 +93,9 @@ const Login = () => {
           </a>
         </p>
 
-        {/* Snackbar Alert */}
+        {/* ------------------------------------------------------------
+             Snackbar Notification
+           ------------------------------------------------------------ */}
         {snackbar.open && (
           <SnackbarAlert
             open={snackbar.open}

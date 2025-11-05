@@ -9,6 +9,9 @@ import {
         COMMENTS ACTIONS
 ================================*/
 
+/**
+ * Add a comment to a post
+ */
 export const commentToPostAction = async (postId, comment) => {
   try {
     const res = await commentToPostService(postId, comment);
@@ -18,6 +21,9 @@ export const commentToPostAction = async (postId, comment) => {
   }
 };
 
+/**
+ * Fetch comments by post
+ */
 export const fetchCommentsByPostAction = async (postId, payload) => {
   try {
     const res = await fetchCommentsByPostService(postId, payload);
@@ -27,6 +33,9 @@ export const fetchCommentsByPostAction = async (postId, payload) => {
   }
 };
 
+/**
+ * Delete comment
+ */
 export const deleteCommentAction = async (commentId) => {
   try {
     const res = await deleteCommentService(commentId);

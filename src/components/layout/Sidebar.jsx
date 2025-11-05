@@ -1,15 +1,30 @@
-import { Home, LogOut, MessageCircle, PlusSquare, User } from "lucide-react";
+import { Home, LogOut, PlusSquare, User } from "lucide-react";
 import actions from "@actions";
 import { usePostModal } from "@contexts/PostModalContext";
 
+/**
+ * Sidebar
+ * ------------------------------------------------------------------
+ * Left-side navigation with main app links and logout.
+ * Includes Create Post integration via PostModalContext.
+ * ------------------------------------------------------------------
+ */
 const Sidebar = () => {
   const { openCreatePostModal } = usePostModal();
+
   const handleLogout = async () => {
-    await actions.auth.logoutAction();
+    try {
+      await actions.auth.logoutAction();
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
   };
 
   return (
     <aside className="fixed left-0 top-0 h-screen w-64 flex flex-col justify-between bg-white py-8 px-6 border-r border-gray-200">
+      {/* ------------------------------------------------------------
+         * Top Section — App Title and Navigation
+         * ------------------------------------------------------------ */}
       <div>
         <h1 className="text-3xl font-extrabold mb-6 tracking-tight text-gray-800">
           Chattr
@@ -17,7 +32,6 @@ const Sidebar = () => {
 
         <nav className="flex flex-col gap-6">
           <SidebarButton icon={<Home size={24} />} label="Home" />
-          <SidebarButton icon={<MessageCircle size={24} />} label="Messages" />
           <SidebarButton
             icon={<PlusSquare size={24} />}
             label="Create"
@@ -27,6 +41,9 @@ const Sidebar = () => {
         </nav>
       </div>
 
+      {/* ------------------------------------------------------------
+         * Bottom Section — Logout
+         * ------------------------------------------------------------ */}
       <SidebarButton
         icon={<LogOut size={24} />}
         label="Logout"
@@ -36,6 +53,13 @@ const Sidebar = () => {
   );
 };
 
+/**
+ * SidebarButton
+ * ------------------------------------------------------------------
+ * Simple reusable button for sidebar navigation.
+ * Accepts icon, label, optional onClick, and active state.
+ * ------------------------------------------------------------------
+ */
 const SidebarButton = ({ icon, label, onClick, active }) => (
   <button
     onClick={onClick}

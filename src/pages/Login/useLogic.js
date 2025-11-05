@@ -7,7 +7,7 @@
    - Loading state and snackbar notifications
 ====================================================== */
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useMemo } from "react";
 import actions from "@actions";
 
 export const useLogic = () => {
@@ -33,6 +33,20 @@ export const useLogic = () => {
   });
 
   /* ----------------------------------------
+   * Derived: simple form validation
+   * ---------------------------------------- */
+  const isValid = useMemo(() => {
+    const email = formValues.user_email?.trim();
+    const pwd = formValues.user_password?.trim();
+    return Boolean(email && pwd);
+  }, [formValues.user_email, formValues.user_password]);
+
+  const isSubmitDisabled = useMemo(
+    () => loading || loadingRef.current || !isValid,
+    [loading, isValid]
+  );
+
+  /* ----------------------------------------
    * Handle Input Changes
    * Updates state dynamically based on input field name
    * ---------------------------------------- */
@@ -45,31 +59,49 @@ export const useLogic = () => {
   }, []);
 
   /* ----------------------------------------
+   * Normalize error to a readable string
+   * ---------------------------------------- */
+  const toMessage = (err) =>
+    (typeof err === "string" && err) ||
+    err?.message ||
+    err?.msg ||
+    "An unexpected error occurred.";
+
+  /* ----------------------------------------
    * Handle Login Submission
    * Performs API request and redirects on success
    * ---------------------------------------- */
   const handleSubmit = useCallback(
     async (e) => {
       e.preventDefault();
-      if (loadingRef.current) return;
+      if (loadingRef.current || !isValid) return;
 
       loadingRef.current = true;
       setLoading(true);
 
-      try {
-        const response = await actions.auth.loginAction(formValues);
+      // Trim payload right before send
+      const payload = {
+        user_email: formValues.user_email.trim(),
+        user_password: formValues.user_password.trim(),
+      };
 
-        if (!response.success)
-          throw new Error(response.msg || "Login failed.");
+      try {
+        const response = await actions.auth.loginAction(payload);
+
+        if (!response?.success) {
+          throw new Error(response?.msg || "Login failed.");
+        }
 
         // Redirect on successful login
         window.location.href = "/";
       } catch (error) {
         console.error("Login Error:", error);
+        // Clear only the password field on error (UX nicety)
+        setFormValues((prev) => ({ ...prev, user_password: "" }));
 
         setSnackbar({
           open: true,
-          message: error || "An unexpected error occurred.",
+          message: toMessage(error),
           severity: "error",
         });
       } finally {
@@ -77,7 +109,7 @@ export const useLogic = () => {
         setLoading(false);
       }
     },
-    [formValues]
+    [formValues.user_email, formValues.user_password, isValid]
   );
 
   /* ----------------------------------------
@@ -94,6 +126,7 @@ export const useLogic = () => {
     loading,
     snackbar,
     formValues,
+    isSubmitDisabled,
     handleCloseSnackbar,
     handleInputChange,
     handleSubmit,

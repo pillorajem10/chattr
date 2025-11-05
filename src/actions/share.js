@@ -2,9 +2,12 @@
 import { sharePostService } from "@services/api/shares";
 
 /*===============================
-        SHARES ACTIONS
+         SHARES ACTIONS
 ================================*/
 
+/**
+ * Share post
+ */
 export const sharePostAction = async (postId, payload) => {
   try {
     const res = await sharePostService(postId, payload);

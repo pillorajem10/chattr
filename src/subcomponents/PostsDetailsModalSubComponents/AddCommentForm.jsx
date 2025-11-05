@@ -1,5 +1,17 @@
 import { Send, User } from "lucide-react";
 
+/**
+ * AddCommentForm Component
+ * ------------------------------------------------------------------
+ * Parent Component: PostDetailsModal
+ *
+ * A lightweight subcomponent that provides an input field and submit
+ * button for adding comments to a post. Includes:
+ *  - Comment text input with live state binding
+ *  - Submit button using a Send icon
+ *  - Optional user avatar placeholder for visual context
+ * ------------------------------------------------------------------
+ */
 const AddCommentForm = ({
   value = "",
   onChange,
