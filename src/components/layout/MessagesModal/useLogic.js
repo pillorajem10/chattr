@@ -1,31 +1,31 @@
-/* ===================================================
-   Message Modal Logic Hook
-   ---------------------------------------------------
-   Handles:
-   - Loading chatrooms and users
-   - Opening and creating chatrooms
-   - Real-time updates via Echo
-   - Sending and receiving messages
-   - Marking conversations as read
-   - Snackbar feedback and UI state
-====================================================== */
-
 import { useState, useCallback, useEffect, useRef } from "react";
 import Cookies from "js-cookie";
 import { echo } from "@utils/echo";
 import actions from "@actions";
 
+/**
+ * useLogic Hook
+ * ------------------------------------------------------------
+ * Handles all state and behavior for the MessageModal component.
+ * Responsibilities include:
+ *  - Managing chatroom list and active conversation
+ *  - Fetching users and chatrooms
+ *  - Sending and receiving messages in real time
+ *  - Handling WebSocket updates via Laravel Echo
+ *  - Managing view state and drawer visibility
+ * ------------------------------------------------------------
+ */
 export const useLogic = () => {
-  /* ----------------------------------------
+  /** ------------------------------------------------------------
    * Current User
-   * ---------------------------------------- */
+   * ------------------------------------------------------------ */
   const accountCookie = Cookies.get("account");
   const currentUser = accountCookie ? JSON.parse(accountCookie) : null;
   const currentUserId = currentUser ? Number(currentUser.id) : null;
 
-  /* ----------------------------------------
-   * UI & Data States
-   * ---------------------------------------- */
+  /** ------------------------------------------------------------
+   * UI and Data States
+   * ------------------------------------------------------------ */
   const [isOpen, setIsOpen] = useState(false);
   const [view, setView] = useState("list");
   const [selectedChatroom, setSelectedChatroom] = useState(null);
@@ -36,11 +36,6 @@ export const useLogic = () => {
   const [chatFilter, setChatFilter] = useState("all");
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
-  const [snackbar, setSnackbar] = useState({
-    open: false,
-    message: "",
-    severity: "success",
-  });
 
   const [userPageDetails, setUserPageDetails] = useState({
     totalRecords: 0,
@@ -50,9 +45,9 @@ export const useLogic = () => {
 
   const chatroomRef = useRef(null);
 
-  /* ----------------------------------------
+  /** ------------------------------------------------------------
    * Drawer Controls
-   * ---------------------------------------- */
+   * ------------------------------------------------------------ */
   const handleToggleDrawer = useCallback(() => {
     setIsOpen((prev) => !prev);
     if (!isOpen) handleGetChatrooms();
@@ -64,24 +59,19 @@ export const useLogic = () => {
     setMessages([]);
   }, []);
 
-  /* ----------------------------------------
-   * Chatroom Operations
-   * ---------------------------------------- */
+  /** ------------------------------------------------------------
+   * Chatroom Management
+   * ------------------------------------------------------------ */
   const handleGetChatrooms = useCallback(
     async (filter = chatFilter) => {
       try {
         setLoading(true);
         const res = await actions.message.getUserChatroomsAction({ filter });
-        if (!res.success)
-          throw new Error(res.msg || "Failed to load chatrooms.");
+        if (!res.success) throw new Error(res.msg || "Failed to load chatrooms.");
         setChatrooms(res.data);
         setChatFilter(filter);
       } catch (error) {
-        setSnackbar({
-          open: true,
-          message: "Failed to load chatrooms.",
-          severity: "error",
-        });
+        console.error("Chatroom Load Error:", error);
       } finally {
         setLoading(false);
       }
@@ -98,7 +88,6 @@ export const useLogic = () => {
 
       const res = await actions.message.getConversationAction(chatroom.id);
       if (!res.success) throw new Error(res.msg || "Failed to load messages.");
-
       setMessages(res.data.records);
 
       await actions.message.markConversationAsReadAction(chatroom.id);
@@ -109,11 +98,6 @@ export const useLogic = () => {
       );
     } catch (error) {
       console.error("Conversation Load Error:", error);
-      setSnackbar({
-        open: true,
-        message: "Failed to open chatroom.",
-        severity: "error",
-      });
     } finally {
       setLoading(false);
     }
@@ -153,19 +137,8 @@ export const useLogic = () => {
         setMessages([]);
         setView("chat");
         chatroomRef.current = newChatroom.id;
-
-        setSnackbar({
-          open: true,
-          message: `Chat started with ${newChatroom.receiver_name}.`,
-          severity: "success",
-        });
       } catch (error) {
         console.error("Create Chatroom Error:", error);
-        setSnackbar({
-          open: true,
-          message: "Failed to create chatroom.",
-          severity: "error",
-        });
       } finally {
         setSending(false);
       }
@@ -173,36 +146,65 @@ export const useLogic = () => {
     [sending, currentUserId]
   );
 
-  /* ----------------------------------------
-   * Real-Time Updates via Echo
-   * ---------------------------------------- */
+  /** ------------------------------------------------------------
+   * Real-Time Event Listeners (Laravel Echo)
+   * ------------------------------------------------------------ */
   useEffect(() => {
     if (!currentUserId) return;
+    const channel = echo.private(`user.${currentUserId}`);
 
-    const userChannel = echo.private(`chatrooms.${currentUserId}`);
-    const messageChannel = echo.private(`messages.${currentUserId}`);
-    const subscribedChannels = [];
+    /**
+     * New Chatroom Created (Real-time)
+     * Automatically formats receiver name so it displays correctly.
+     */
+    channel.listen(".chatroom.created", async (event) => {
+      let newChatroom = event.chatroom;
 
-    // Listen for new chatroom creation
-    userChannel.listen(".chatroom.created", (event) => {
-      const newChatroom = event.chatroom;
+      // If the payload doesn't include user relations, fetch them manually
+      if (!newChatroom.user_one && !newChatroom.userOne) {
+        try {
+          const res = await actions.message.getChatroomDetailsAction(newChatroom.id);
+          if (res.success) newChatroom = res.data.chatroom;
+        } catch (error) {
+          console.error("Failed to fetch chatroom details:", error);
+        }
+      }
+
+      // Determine which side of the chatroom is the receiver
+      const isUserOne = newChatroom.cr_user_one_id === currentUserId;
+      const receiver = isUserOne
+        ? newChatroom.user_two || newChatroom.userTwo
+        : newChatroom.user_one || newChatroom.userOne;
+
+      newChatroom = {
+        ...newChatroom,
+        receiver_name: receiver
+          ? `${receiver.user_fname} ${receiver.user_lname}`
+          : "User",
+      };
+
       setChatrooms((prev) => {
         const exists = prev.some((c) => c.id === newChatroom.id);
         return exists ? prev : [newChatroom, ...prev];
       });
     });
 
-    // Listen globally for direct messages
-    messageChannel.listen(".message.sent", (event) => {
-      const message = event.message || event;
+    /**
+     * Message Sent or Received
+     * Updates chatroom metadata and message list dynamically.
+     */
+    channel.listen(".message.sent", (event) => {
+      const message = event.message;
       const chatroomId = message.message_chatroom_id;
 
+      // Update chatroom preview and unread count
       setChatrooms((prev) => {
-        let updated = prev.map((c) =>
+        const updated = prev.map((c) =>
           c.id === chatroomId
             ? {
                 ...c,
                 messages: [message],
+                latest_message: message.message_content,
                 unread_count:
                   selectedChatroom?.id === chatroomId
                     ? 0
@@ -211,26 +213,31 @@ export const useLogic = () => {
             : c
         );
 
+        // Sort chatrooms by latest message timestamp
         updated.sort((a, b) => {
           const timeA = a.messages?.[0]?.created_at || a.updated_at;
           const timeB = b.messages?.[0]?.created_at || b.updated_at;
           return new Date(timeB) - new Date(timeA);
         });
 
-        if (chatFilter === "unread") {
-          updated = updated.filter((c) => c.unread_count > 0);
-        }
-
-        return updated;
+        return chatFilter === "unread"
+          ? updated.filter((c) => c.unread_count > 0)
+          : updated;
       });
 
+      // If current chatroom is open, append message
       setMessages((prev) =>
         selectedChatroom?.id === chatroomId ? [message, ...prev] : prev
       );
     });
 
-    messageChannel.listen(".message.read", (event) => {
+    /**
+     * Message Read Event
+     * Clears unread count and marks messages as read.
+     */
+    channel.listen(".message.read", (event) => {
       const receiverId = event.receiver_id;
+
       setChatrooms((prev) =>
         prev.map((c) =>
           c.cr_user_one_id === receiverId || c.cr_user_two_id === receiverId
@@ -238,69 +245,25 @@ export const useLogic = () => {
             : c
         )
       );
+
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.message_sender_id === receiverId
+            ? { ...msg, message_read: true }
+            : msg
+        )
+      );
     });
 
-    // Subscribe to all active chatrooms
-    if (chatrooms.length > 0) {
-      chatrooms.forEach((room) => {
-        const roomChannel = echo.private(`chatroom.${room.id}`);
-
-        roomChannel.listen(".message.sent", (event) => {
-          const message = event.message || event;
-          const chatroomId = message.message_chatroom_id;
-
-          setChatrooms((prev) =>
-            prev.map((c) =>
-              c.id === chatroomId
-                ? {
-                    ...c,
-                    messages: [message],
-                    unread_count:
-                      selectedChatroom?.id === chatroomId
-                        ? 0
-                        : (c.unread_count || 0) + 1,
-                  }
-                : c
-            )
-          );
-
-          setMessages((prev) =>
-            selectedChatroom?.id === chatroomId ? [message, ...prev] : prev
-          );
-        });
-
-        roomChannel.listen(".message.read", (event) => {
-          const receiverId = event.receiver_id;
-          setChatrooms((prev) =>
-            prev.map((c) =>
-              c.id === room.id ? { ...c, unread_count: 0 } : c
-            )
-          );
-
-          setMessages((prev) =>
-            prev.map((msg) =>
-              msg.message_sender_id === receiverId
-                ? { ...msg, message_read: true }
-                : msg
-            )
-          );
-        });
-
-        subscribedChannels.push(`chatroom.${room.id}`);
-      });
-    }
-
-    // Cleanup
+    // Cleanup subscription when component unmounts
     return () => {
-      echo.leave(`private-chatrooms.${currentUserId}`);
-      echo.leave(`private-messages.${currentUserId}`);
-      subscribedChannels.forEach((ch) => echo.leave(ch));
+      echo.leave(`private-user.${currentUserId}`);
     };
-  }, [currentUserId, chatrooms, selectedChatroom, chatFilter]);
+  }, [currentUserId, selectedChatroom, chatFilter]);
 
-  /* ----------------------------------------
-   * Messaging Operations
-   * ---------------------------------------- */
+  /** ------------------------------------------------------------
+   * Message Sending
+   * ------------------------------------------------------------ */
   const handleSendMessage = useCallback(async () => {
     if (!messageText.trim() || sending || !selectedChatroom) return;
     setSending(true);
@@ -321,19 +284,14 @@ export const useLogic = () => {
       setMessageText("");
     } catch (error) {
       console.error("Send Message Error:", error);
-      setSnackbar({
-        open: true,
-        message: "Failed to send message.",
-        severity: "error",
-      });
     } finally {
       setSending(false);
     }
   }, [messageText, selectedChatroom, sending, currentUserId]);
 
-  /* ----------------------------------------
-   * User Operations
-   * ---------------------------------------- */
+  /** ------------------------------------------------------------
+   * User Management
+   * ------------------------------------------------------------ */
   const handleGetUsers = useCallback(
     async (pageIndex = 1, searchQuery = "") => {
       try {
@@ -355,11 +313,6 @@ export const useLogic = () => {
         });
       } catch (error) {
         console.error("User Load Error:", error);
-        setSnackbar({
-          open: true,
-          message: "Failed to load users.",
-          severity: "error",
-        });
       } finally {
         setLoading(false);
       }
@@ -367,23 +320,16 @@ export const useLogic = () => {
     []
   );
 
-  /* ----------------------------------------
-   * Snackbar Controls
-   * ---------------------------------------- */
-  const handleCloseSnackbar = useCallback(() => {
-    setSnackbar((prev) => ({ ...prev, open: false }));
-  }, []);
-
-  /* ----------------------------------------
-   * Auto-load Chatrooms When Drawer Opens
-   * ---------------------------------------- */
+  /** ------------------------------------------------------------
+   * Lifecycle Effects
+   * ------------------------------------------------------------ */
   useEffect(() => {
     if (isOpen) handleGetChatrooms();
   }, [isOpen, handleGetChatrooms]);
 
-  /* ----------------------------------------
-   * Public API
-   * ---------------------------------------- */
+  /** ------------------------------------------------------------
+   * Hook Return
+   * ------------------------------------------------------------ */
   return {
     isOpen,
     view,
@@ -393,7 +339,6 @@ export const useLogic = () => {
     messageText,
     loading,
     sending,
-    snackbar,
     userPageDetails,
     users,
     chatFilter,
@@ -405,8 +350,6 @@ export const useLogic = () => {
     handleSendMessage,
     handleGetChatrooms,
     handleGetUsers,
-    handleCloseSnackbar,
-    setSnackbar,
     currentUserId,
   };
 };

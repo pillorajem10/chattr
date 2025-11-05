@@ -11,6 +11,16 @@ import { useState } from "react";
 import { useLogic } from "./useLogic";
 import CreateChatroomModal from "@subcomponents/MessagesModalSubComponents/CreateChatroomModal";
 
+/**
+ * MessageModal Component
+ * ------------------------------------------------------------
+ * Displays the messaging interface, including:
+ * - Chatroom list and unread filtering
+ * - Real-time conversation view
+ * - Message sending and chat creation
+ * - Drawer-based UI for compact layout
+ * ------------------------------------------------------------
+ */
 const MessageModal = () => {
   const {
     isOpen,
@@ -21,7 +31,6 @@ const MessageModal = () => {
     messageText,
     loading,
     sending,
-    snackbar,
     userPageDetails,
     users,
     chatFilter,
@@ -33,13 +42,17 @@ const MessageModal = () => {
     handleGetUsers,
     handleGetChatrooms,
     handleCreateChatroom,
-    handleCloseSnackbar,
   } = useLogic();
 
   const account = Cookies.get("account");
   const currentUserId = account ? JSON.parse(account)?.id : null;
   const [showCreateModal, setShowCreateModal] = useState(false);
 
+  /**
+   * -------------------------------------------------------------------
+   * Floating Message Button (visible when drawer is closed)
+   * -------------------------------------------------------------------
+   */
   if (!isOpen)
     return (
       <button
@@ -51,17 +64,29 @@ const MessageModal = () => {
       </button>
     );
 
+  /**
+   * -------------------------------------------------------------------
+   * Message Drawer
+   * -------------------------------------------------------------------
+   */
   return (
     <div className="fixed bottom-6 right-6 w-96 h-[550px] bg-white shadow-2xl rounded-2xl flex flex-col overflow-hidden border border-gray-200 z-50">
+
+      {/* ------------------------------------------------------------
+         Header: Displays either the chat title or the message list title
+         ------------------------------------------------------------ */}
       <div className="flex items-center justify-between px-4 py-3 border-b bg-gray-50">
         {view === "chat" ? (
           <>
             <button
               onClick={handleCloseChat}
               className="text-gray-500 hover:text-gray-700"
+              aria-label="Back to messages"
             >
               <ArrowLeft size={20} />
             </button>
+
+            {/* Dynamic chat title based on current receiver */}
             <h2 className="text-lg font-semibold text-gray-800 truncate flex-1 text-center">
               {selectedChatroom &&
                 (() => {
@@ -79,9 +104,11 @@ const MessageModal = () => {
                     : "User";
                 })()}
             </h2>
+
             <button
               onClick={handleToggleDrawer}
               className="text-gray-500 hover:text-gray-700"
+              aria-label="Close messages"
             >
               <X size={20} />
             </button>
@@ -92,6 +119,7 @@ const MessageModal = () => {
             <button
               onClick={handleToggleDrawer}
               className="text-gray-500 hover:text-gray-700"
+              aria-label="Close messages"
             >
               <X size={20} />
             </button>
@@ -99,9 +127,13 @@ const MessageModal = () => {
         )}
       </div>
 
+      {/* ------------------------------------------------------------
+         Main Content Area
+         ------------------------------------------------------------ */}
       <div className="flex-1 overflow-y-auto bg-gray-50 relative">
         {view === "list" ? (
           <>
+            {/* Filter Bar: All / Unread */}
             <div className="flex justify-center gap-3 py-2 border-b bg-gray-100">
               <button
                 onClick={() => handleGetChatrooms("all")}
@@ -130,18 +162,21 @@ const MessageModal = () => {
               </button>
             </div>
 
+            {/* Loading State */}
             {loading && (
               <p className="text-center text-gray-500 py-4">
                 Loading conversations...
               </p>
             )}
 
+            {/* Empty State */}
             {!loading && chatrooms.length === 0 && (
               <p className="text-center text-gray-500 py-4">
                 No conversations yet.
               </p>
             )}
 
+            {/* Chatroom List */}
             {!loading &&
               chatrooms.map((chatroom) => {
                 const userId = Number(currentUserId);
@@ -160,6 +195,7 @@ const MessageModal = () => {
                     <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
                       <User size={20} className="text-gray-600" />
                     </div>
+
                     <div className="flex-1 overflow-hidden">
                       <p className="font-medium text-gray-800 truncate">
                         {receiver?.user_fname} {receiver?.user_lname}
@@ -168,6 +204,7 @@ const MessageModal = () => {
                         {latest ? latest.message_content : "No messages yet"}
                       </p>
                     </div>
+
                     {chatroom.unread_count > 0 && (
                       <span className="bg-blue-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">
                         {chatroom.unread_count}
@@ -177,6 +214,7 @@ const MessageModal = () => {
                 );
               })}
 
+            {/* New Chat Button */}
             <button
               onClick={() => setShowCreateModal(true)}
               className="absolute bottom-4 right-4 bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-full shadow-md"
@@ -186,6 +224,11 @@ const MessageModal = () => {
             </button>
           </>
         ) : (
+          /**
+           * -------------------------------------------------------------------
+           * Chat View
+           * -------------------------------------------------------------------
+           */
           <>
             {loading ? (
               <p className="text-center text-gray-500 py-4">
@@ -198,6 +241,7 @@ const MessageModal = () => {
                     No messages yet.
                   </p>
                 )}
+
                 {messages.map((msg) => {
                   const isMine =
                     Number(msg.message_sender_id) === Number(currentUserId);
@@ -226,6 +270,9 @@ const MessageModal = () => {
         )}
       </div>
 
+      {/* ------------------------------------------------------------
+         Message Input Section (visible only in chat view)
+         ------------------------------------------------------------ */}
       {view === "chat" && (
         <div className="border-t p-3 flex items-center gap-2 bg-white">
           <input
@@ -251,6 +298,9 @@ const MessageModal = () => {
         </div>
       )}
 
+      {/* ------------------------------------------------------------
+         Create Chatroom Modal
+         ------------------------------------------------------------ */}
       {showCreateModal && (
         <CreateChatroomModal
           open={showCreateModal}
@@ -264,22 +314,6 @@ const MessageModal = () => {
           userPageDetails={userPageDetails}
           loading={loading}
         />
-      )}
-
-      {snackbar.open && (
-        <div
-          className={`absolute bottom-4 left-1/2 -translate-x-1/2 bg-${
-            snackbar.severity === "error" ? "red" : "blue"
-          }-600 text-white px-4 py-2 rounded-lg text-sm shadow-lg`}
-        >
-          {snackbar.message}
-          <button
-            onClick={handleCloseSnackbar}
-            className="ml-3 text-white/80 hover:text-white font-semibold"
-          >
-            ×
-          </button>
-        </div>
       )}
     </div>
   );

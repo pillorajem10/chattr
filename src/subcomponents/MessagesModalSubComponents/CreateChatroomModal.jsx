@@ -1,6 +1,16 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { X, User, Loader2 } from "lucide-react";
 
+/**
+ * CreateChatroomModal Component
+ * ------------------------------------------------------------------
+ * Provides a user search and selection interface for starting
+ * a new private chat conversation. Includes:
+ *  - Debounced user search with backend sync
+ *  - Infinite scroll for user pagination
+ *  - Clean, accessible modal layout
+ * ------------------------------------------------------------------
+ */
 const CreateChatroomModal = ({
   open,
   onClose,
@@ -10,39 +20,50 @@ const CreateChatroomModal = ({
   userPageDetails,
   loading,
 }) => {
+  /* --------------------------------------------------------------
+   * Local state
+   * -------------------------------------------------------------- */
   const [selectedUser, setSelectedUser] = useState(null);
   const [search, setSearch] = useState("");
   const loaderRef = useRef(null);
+  const scrollRef = useRef(null);
+  const searchTimer = useRef(null);
 
-  /* ----------------------------------------
-   * Auto-fetch users when modal opens
-   * ---------------------------------------- */
+  /* --------------------------------------------------------------
+   * Fetch users when modal opens
+   * -------------------------------------------------------------- */
   useEffect(() => {
-    if (open && users.length === 0) {
-      handleGetUsers(1, "");
+    if (open) {
+      handleGetUsers(1, ""); // initial load
     }
   }, [open]);
 
-  /* ----------------------------------------
-   * Debounced Search (syncs with backend)
-   * ---------------------------------------- */
+  /* --------------------------------------------------------------
+   * Debounced Search Logic
+   * Resets pagination and results when search query changes
+   * -------------------------------------------------------------- */
   useEffect(() => {
     if (!open) return;
-    const delay = setTimeout(() => {
-      handleGetUsers(1, search);
-    }, 500);
-    return () => clearTimeout(delay);
+
+    // Clear existing timer to debounce multiple keystrokes
+    clearTimeout(searchTimer.current);
+
+    searchTimer.current = setTimeout(() => {
+      handleGetUsers(1, search); // reset to first page on new search
+    }, 400);
+
+    return () => clearTimeout(searchTimer.current);
   }, [search, open]);
 
-  /* ----------------------------------------
-   * Infinite Scroll (Stable Version)
-   * ---------------------------------------- */
+  /* --------------------------------------------------------------
+   * Infinite Scroll Pagination
+   * Uses IntersectionObserver to fetch next page when reaching bottom
+   * -------------------------------------------------------------- */
   useEffect(() => {
-    if (!open) return;
-    if (!loaderRef.current) return;
+    if (!open || !loaderRef.current) return;
 
-    const scrollContainer = loaderRef.current.closest(".overflow-y-auto");
-    if (!scrollContainer) return;
+    const container = scrollRef.current;
+    if (!container) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -50,14 +71,14 @@ const CreateChatroomModal = ({
         if (
           first.isIntersecting &&
           !loading &&
-          !search.trim() &&
+          !search.trim() && // disable infinite scroll while searching
           userPageDetails.pageIndex < userPageDetails.totalPages
         ) {
           handleGetUsers(userPageDetails.pageIndex + 1, "");
         }
       },
       {
-        root: scrollContainer,
+        root: container,
         rootMargin: "200px",
         threshold: 0.1,
       }
@@ -67,41 +88,49 @@ const CreateChatroomModal = ({
     return () => observer.disconnect();
   }, [
     open,
-    handleGetUsers,
     loading,
     search,
+    handleGetUsers,
     userPageDetails.pageIndex,
     userPageDetails.totalPages,
   ]);
 
-  /* ----------------------------------------
-   * Handle Submit
-   * ---------------------------------------- */
-  const handleSubmit = () => {
+  /* --------------------------------------------------------------
+   * Submit new chatroom creation
+   * -------------------------------------------------------------- */
+  const handleSubmit = useCallback(() => {
     if (!selectedUser) return;
     onCreateChatroom(selectedUser.id);
-  };
+  }, [selectedUser, onCreateChatroom]);
 
+  /* --------------------------------------------------------------
+   * Render nothing if modal is closed
+   * -------------------------------------------------------------- */
   if (!open) return null;
 
-  /* ----------------------------------------
-   * Render
-   * ---------------------------------------- */
+  /* --------------------------------------------------------------
+   * Render Modal UI
+   * -------------------------------------------------------------- */
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[9999]">
       <div className="bg-white rounded-xl shadow-2xl w-96 max-h-[80vh] flex flex-col overflow-hidden">
-        {/* HEADER */}
+        {/* ----------------------------------------------------------
+         * Header
+         * ---------------------------------------------------------- */}
         <div className="flex items-center justify-between border-b px-4 py-3 bg-gray-50">
           <h2 className="text-lg font-semibold text-gray-800">New Message</h2>
           <button
             onClick={onClose}
             className="text-gray-500 hover:text-gray-700 transition"
+            aria-label="Close modal"
           >
             <X size={20} />
           </button>
         </div>
 
-        {/* SEARCH */}
+        {/* ----------------------------------------------------------
+         * Search Bar
+         * ---------------------------------------------------------- */}
         <div className="p-3 border-b">
           <input
             type="text"
@@ -112,17 +141,22 @@ const CreateChatroomModal = ({
           />
         </div>
 
-        {/* USER LIST */}
-        <div className="flex-1 overflow-y-auto">
+        {/* ----------------------------------------------------------
+         * User List
+         * ---------------------------------------------------------- */}
+        <div ref={scrollRef} className="flex-1 overflow-y-auto">
           {loading && users.length === 0 ? (
+            // Initial loading state
             <div className="flex flex-col items-center justify-center h-40 text-gray-500">
               <Loader2 size={20} className="animate-spin mb-2" />
               Loading users...
             </div>
           ) : users.length === 0 ? (
+            // Empty result state
             <div className="p-6 text-center text-gray-400">No users found.</div>
           ) : (
             <>
+              {/* User cards */}
               {users.map((user) => {
                 const isSelected = selectedUser?.id === user.id;
                 const fullName = `${user.user_fname || ""} ${
@@ -175,17 +209,20 @@ const CreateChatroomModal = ({
                 );
               })}
 
+              {/* Infinite scroll loader */}
               <div
                 ref={loaderRef}
                 className="flex justify-center items-center py-3 text-gray-400 text-sm"
               >
-                {loading && "Loading more users..."}
+                {loading && !search && "Loading more users..."}
               </div>
             </>
           )}
         </div>
 
-        {/* FOOTER */}
+        {/* ----------------------------------------------------------
+         * Footer actions
+         * ---------------------------------------------------------- */}
         <div className="border-t p-3 flex justify-end gap-2 bg-gray-50">
           <button
             onClick={onClose}
@@ -193,7 +230,6 @@ const CreateChatroomModal = ({
           >
             Cancel
           </button>
-
           <button
             onClick={handleSubmit}
             disabled={!selectedUser}

@@ -8,9 +8,9 @@ import {
         USERS ACTIONS
 ================================*/
 
-export const fetchUsersAction = async () => {
+export const fetchUsersAction = async (payload) => {
   try {
-    const res = await fetchUsersService();
+    const res = await fetchUsersService(payload);
     return res;
   } catch (error) {
     throw error;

@@ -12,6 +12,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import actions from "@actions";
 import { echo } from "@utils/echo";
 import { usePostModal } from "@contexts/PostModalContext";
+import Cookies from "js-cookie";
 
 export const useLogic = () => {
   /* ----------------------------------------

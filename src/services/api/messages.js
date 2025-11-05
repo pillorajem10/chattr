@@ -9,8 +9,6 @@ import { POST, GET, PATCH } from "@services/request";
 import * as helpers from "@utils/helpers";
 
 export async function getUserChatroomsService(payload) {
-  console.log("getUserChatroomsService payload:", payload);
-
   const params = helpers.convertQueryString(payload);
   return GET(`/messages?${params}`);
 };
