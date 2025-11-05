@@ -14,7 +14,7 @@ export const useLogic = () => {
   /* ----------------------------------------
    * References
    * ---------------------------------------- */
-  const loadingRef = useRef(false); // Prevents multiple submissions
+  const loadingRef = useRef(false); 
 
   /* ----------------------------------------
    * States
