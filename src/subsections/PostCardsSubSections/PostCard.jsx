@@ -17,6 +17,7 @@ import SharedPostCard from "@subsections/PostCardsSubsections/SharedPostCard";
  * the PostCards section.
  * ------------------------------------------------------------------
  */
+
 const PostCard = ({ post, onLike, onRemoveLike, onOpenPostDetails, onShare }) => {
   const {
     id,
