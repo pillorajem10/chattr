@@ -46,13 +46,8 @@ const PostCardFooter = ({
    * Performs instant UI updates while syncing to backend
    * ------------------------------------------------------------ */
   const handleLikeClick = async () => {
-    console.log(
-      `[Post ${postId}] Like button clicked | liked: ${liked}, reactionId: ${localReactionId}`
-    );
-
     if (liked) {
       // Unlike post
-      console.log(`[Post ${postId}] Sending unlike request...`);
       setLiked(false);
       setLocalLikes((prev) => Math.max(prev - 1, 0));
 
@@ -62,7 +57,6 @@ const PostCardFooter = ({
       }
     } else {
       // Like post
-      console.log(`[Post ${postId}] Sending like request...`);
       setLiked(true);
       setLocalLikes((prev) => prev + 1);
 
@@ -70,7 +64,6 @@ const PostCardFooter = ({
 
       // Store the newly created reaction ID
       if (response?.success && response?.data?.id) {
-        console.log(`[Post ${postId}] Received new reaction ID: ${response.data.id}`);
         setLocalReactionId(response.data.id);
       }
     }

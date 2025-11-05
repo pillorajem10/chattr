@@ -33,7 +33,6 @@ const Home = () => {
     loading,
     posts,
     snackbar,
-    pageDetails,
     formValues,
     commentFormValues,
     loaderRef,

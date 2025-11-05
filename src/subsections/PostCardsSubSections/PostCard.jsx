@@ -27,7 +27,7 @@ const PostCard = ({ post, onLike, onRemoveLike, onOpenPostDetails, onShare }) =>
     original_post,
     likedByUser,
     likesCount,
-    commentCount,
+    commentsCount,
     shareCount,
     user_reaction_id,
   } = post;
@@ -71,7 +71,7 @@ const PostCard = ({ post, onLike, onRemoveLike, onOpenPostDetails, onShare }) =>
         reactionId={user_reaction_id}
         isLiked={likedByUser}
         likesCount={likesCount}
-        commentCount={commentCount}
+        commentCount={commentsCount}
         onOpenPostDetails={onOpenPostDetails}
         shareCount={shareCount}
         onShare={onShare}

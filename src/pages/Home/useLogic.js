@@ -5,6 +5,7 @@
    - Post fetching with infinite scroll
    - Optimistic like/unlike behavior
    - Snackbar notifications
+   - Real-time updates for likes and comments
    - UI state management
 ====================================================== */
 
@@ -49,8 +50,7 @@ export const useLogic = () => {
   });
 
   /* ----------------------------------------
-   * Fetch Posts (with optional append)
-   * Used for both initial load and infinite scroll
+   * Fetch Posts
    * ---------------------------------------- */
   const handlePostsFetch = useCallback(
     async ({ pageIndex = 1, append = false } = {}) => {
@@ -65,7 +65,12 @@ export const useLogic = () => {
         if (!response.success)
           throw new Error(response.msg || "Failed to fetch posts.");
 
-        const newRecords = response.data.records || [];
+        const newRecords = (response.data.records || []).map((post) => ({
+          ...post,
+          commentsCount: post.commentsCount ?? post.commentCount ?? 0,
+          likesCount: post.likesCount ?? post.likeCount ?? 0,
+          shareCount: post.shareCount ?? post.sharesCount ?? 0,
+        }));
 
         setPosts((prev) => (append ? [...prev, ...newRecords] : newRecords));
 
@@ -90,7 +95,7 @@ export const useLogic = () => {
   );
 
   /* ----------------------------------------
-   * Like Post (optimistic)
+   * Like / Unlike Post
    * ---------------------------------------- */
   const handleLikePost = useCallback(async (postId) => {
     try {
@@ -121,9 +126,6 @@ export const useLogic = () => {
     }
   }, []);
 
-  /* ----------------------------------------
-   * Remove Like (optimistic)
-   * ---------------------------------------- */
   const handleRemoveLikePost = useCallback(async (reactionId, postId) => {
     try {
       if (!reactionId) {
@@ -146,7 +148,6 @@ export const useLogic = () => {
       const response = await actions.reaction.removeReactFromPostAction(reactionId);
 
       if (!response.success) {
-        // revert
         setPosts((prev) =>
           prev.map((post) =>
             post.id === postId
@@ -161,7 +162,6 @@ export const useLogic = () => {
         throw new Error(response.msg || "Failed to remove like.");
       }
 
-      // clear user_reaction_id
       setPosts((prev) =>
         prev.map((post) =>
           post.id === postId ? { ...post, user_reaction_id: null } : post
@@ -211,19 +211,23 @@ export const useLogic = () => {
   }, [handlePostsFetch, pageDetails, loading]);
 
   /* ----------------------------------------
-   * Open Post Details (loads comments if needed)
+   * Open and Close Post Details
    * ---------------------------------------- */
   const handleOpenPostDetails = useCallback(async (postId) => {
     try {
       const response = await actions.post.fetchPostDetailAction(postId);
-      if (!response.success) throw new Error(response.msg || "Failed to fetch post details.");
+      if (!response.success)
+        throw new Error(response.msg || "Failed to fetch post details.");
 
       const postData = response.data;
       setSelectedPost(postData);
       setShowPostDetailsModal(true);
 
       if (!postData.comments) {
-        const commentsResponse = await actions.comment.fetchCommentsByPostAction(postId, { pageIndex: 1 });
+        const commentsResponse = await actions.comment.fetchCommentsByPostAction(
+          postId,
+          { pageIndex: 1 }
+        );
         if (commentsResponse.success) {
           setPostComments(commentsResponse.data || []);
         }
@@ -240,8 +244,14 @@ export const useLogic = () => {
     }
   }, []);
 
+  const handleClosePostDetails = useCallback(() => {
+    setShowPostDetailsModal(false);
+    setSelectedPost(null);
+    setPostComments([]);
+  }, []);
+
   /* ----------------------------------------
-   * Share Modal open/close
+   * Share Modal
    * ---------------------------------------- */
   const handleOpenShareModal = useCallback(async (postId) => {
     try {
@@ -267,16 +277,7 @@ export const useLogic = () => {
   }, []);
 
   /* ----------------------------------------
-   * Close Post Details Modal
-   * ---------------------------------------- */
-  const handleClosePostDetails = useCallback(() => {
-    setShowPostDetailsModal(false);
-    setSelectedPost(null);
-    setPostComments([]);
-  }, []);
-
-  /* ----------------------------------------
-   * Inputs change handlers
+   * Input Handlers
    * ---------------------------------------- */
   const handleCommentInputChange = (e) => {
     const { name, value } = e.target;
@@ -336,26 +337,24 @@ export const useLogic = () => {
   const handleSubmitPost = useCallback(
     async (e) => {
       e.preventDefault();
-
       if (loadingRef.current) return;
+
       loadingRef.current = true;
       setLoading(true);
 
       try {
         const response = await actions.post.createPostAction(formValues);
-
         if (!response.success)
           throw new Error(response.msg || "Failed to create post.");
 
         setFormValues({ post_content: "" });
         setSnackbar({
           open: true,
-          message: "Post created successfully!",
+          message: "Post created successfully.",
           severity: "success",
         });
 
         closeCreatePostModal();
-
         await handlePostsFetch({ pageIndex: 1 });
       } catch (error) {
         console.error("Create Post Error:", error);
@@ -378,29 +377,24 @@ export const useLogic = () => {
   const handleSubmitShare = useCallback(
     async (e) => {
       e.preventDefault();
-
       if (loadingRef.current) return;
+
       loadingRef.current = true;
       setLoading(true);
 
       try {
-        const response = await actions.share.sharePostAction(
-          selectedPost.id,
-          shareFormValues
-        );
+        const response = await actions.share.sharePostAction(selectedPost.id, shareFormValues);
         if (!response.success)
           throw new Error(response.msg || "Failed to share post.");
 
         setShareFormValues({ share_caption: "" });
-
         setSnackbar({
           open: true,
-          message: "Post shared successfully!",
+          message: "Post shared successfully.",
           severity: "success",
         });
 
         handleCloseShareModal();
-
         await handlePostsFetch({ pageIndex: 1 });
       } catch (error) {
         console.error("Share Post Error:", error);
@@ -418,7 +412,7 @@ export const useLogic = () => {
   );
 
   /* ----------------------------------------
-   * Real-time Updates via Echo (likes)
+   * Real-time Updates (Likes)
    * ---------------------------------------- */
   useEffect(() => {
     const channel = echo.channel("reactions");
@@ -449,6 +443,53 @@ export const useLogic = () => {
   }, []);
 
   /* ----------------------------------------
+   * Real-time Updates (Comments)
+   * ---------------------------------------- */
+  useEffect(() => {
+    const channel = echo.channel("comments");
+
+    channel.listen(".comment.created", (event) => {
+      const { comment, commentCount } = event;
+      if (!comment) return;
+
+      const postId = Number(comment.comment_post_id || comment.post_id);
+      const newCount = Number(commentCount ?? 0);
+
+      setPosts((prev) =>
+        prev.map((p) =>
+          p.id === postId ? { ...p, commentsCount: newCount } : p
+        )
+      );
+
+      if (selectedPost?.id === postId) {
+        setSelectedPost((prev) => (prev ? { ...prev, commentsCount: newCount } : prev));
+        setPostComments((prev) => [...prev, comment]);
+      }
+    });
+
+    channel.listen(".comment.removed", (event) => {
+      const postId = Number(event.comment_post_id || event.post_id);
+      const commentId = Number(event.comment_id);
+      const newCount = Number(event.commentCount ?? 0);
+
+      setPosts((prev) =>
+        prev.map((p) =>
+          p.id === postId ? { ...p, commentsCount: newCount } : p
+        )
+      );
+
+      if (selectedPost?.id === postId) {
+        setSelectedPost((prev) => (prev ? { ...prev, commentsCount: newCount } : prev));
+        setPostComments((prev) => prev.filter((c) => c.id !== commentId));
+      }
+    });
+
+    return () => {
+      echo.leave("comments");
+    };
+  }, [selectedPost]);
+
+  /* ----------------------------------------
    * Initial Data Load
    * ---------------------------------------- */
   useEffect(() => {
@@ -456,7 +497,7 @@ export const useLogic = () => {
   }, [handlePostsFetch]);
 
   /* ----------------------------------------
-   * Expose Reactive State & Functions
+   * Expose State and Handlers
    * ---------------------------------------- */
   return {
     loading,
