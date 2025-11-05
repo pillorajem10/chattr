@@ -105,16 +105,7 @@ export const useLogic = () => {
         if (!response?.success)
           throw new Error(response?.msg || "Registration failed.");
 
-        setSnackbar({
-          open: true,
-          message: "Account created successfully! Redirecting...",
-          severity: "success",
-        });
-
-        // Redirect after short delay
-        setTimeout(() => {
-          window.location.href = "/";
-        }, 1000);
+        window.location.href = "/";
       } catch (error) {
         console.error("Register Error:", error);
         setFormValues((prev) => ({ ...prev, user_password: "" }));

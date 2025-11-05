@@ -50,11 +50,7 @@ export const useLogic = () => {
       setLoading(true);
       try {
         await actions.auth.loginAction(formValues);
-        setSnackbar({
-          open: true,
-          message: "Login successful!",
-          severity: "success",
-        });
+        window.location.href = "/";
       } catch (error) {
         setSnackbar({
           open: true,
