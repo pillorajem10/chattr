@@ -5,7 +5,7 @@ import SharedPostCard from "@subsections/PostCardsSubsections/SharedPostCard";
 /**
  * PostCard Component
  * ------------------------------------------------------------------
- * Parent Section: PostCards 
+ * Parent Section: PostCards
  *
  * Renders a single post entry, showing:
  *  - User details (name and timestamp)
@@ -17,7 +17,6 @@ import SharedPostCard from "@subsections/PostCardsSubsections/SharedPostCard";
  * the PostCards section.
  * ------------------------------------------------------------------
  */
-
 const PostCard = ({ post, onLike, onRemoveLike, onOpenPostDetails, onShare }) => {
   const {
     id,
