@@ -17,7 +17,7 @@ const MainLayout = () => {
       {/* ------------------------------------------------------------
          * Sidebar – visible on large screens
          * ------------------------------------------------------------ */}
-      <aside className="hidden lg:block fixed left-0 top-0 h-screen w-64 border-r border-gray-200 bg-white z-30">
+      <aside className="hidden lg:block fixed left-0 top-0 h-screen w-72 border-r border-gray-200 bg-white z-30">
         <Sidebar />
       </aside>
 

@@ -4,14 +4,9 @@ import { useLogic } from "./useLogic";
 /**
  * NotificationsDrawer Component
  * ------------------------------------------------------------------
- * Parent Component: Navbar
- *
- * Displays a slide-in drawer for viewing, filtering, and marking
- * notifications as read. Includes:
- *  - Infinite scroll for notification pagination
- *  - "All" and "Unread" filter tabs
- *  - Real-time unread count updates synced with Navbar badge
- *  - Smooth open/close transitions with backdrop overlay
+ * Displays a responsive slide-in drawer for notifications:
+ * - Desktop: right-side drawer
+ * - Mobile: full-screen overlay
  * ------------------------------------------------------------------
  */
 const NotificationsDrawer = ({
@@ -36,24 +31,25 @@ const NotificationsDrawer = ({
       {/* Overlay */}
       <div
         onClick={onClose}
-        className={`fixed inset-0 z-40 bg-black/20 backdrop-blur-[1px] transition-opacity duration-300
+        className={`fixed inset-0 z-40 bg-black/30 backdrop-blur-[2px] transition-opacity duration-300
           ${open ? "opacity-100 visible" : "opacity-0 invisible"}
         `}
       />
 
       {/* Drawer */}
       <div
-        className={`fixed top-0 h-screen bg-white shadow-2xl border-l border-gray-200 z-50 w-[380px]
-          transition-all duration-300 ease-in-out
-          ${open ? "translate-x-0 opacity-100" : "-translate-x-6 opacity-0 pointer-events-none"}
+        className={`fixed top-0 right-0 bg-white shadow-2xl border-l border-gray-200 z-50 flex flex-col transition-all duration-300 ease-in-out
+          w-full h-full rounded-none
+          md:w-[380px] md:h-screen md:rounded-none
+          ${open ? "translate-x-0 opacity-100" : "translate-x-full opacity-0 pointer-events-none"}
         `}
-        style={{ left: open ? `${leftOffsetPx}px` : `${leftOffsetPx - 20}px` }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b bg-gray-50">
+        <div className="flex items-center justify-between p-4 border-b bg-gray-50 sticky top-0 z-10">
           <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
             Notifications
           </h2>
+
           <div className="flex items-center gap-3">
             <button
               onClick={markAllAsRead}
@@ -69,14 +65,19 @@ const NotificationsDrawer = ({
               <CheckCheck size={18} />
               <span>Mark all</span>
             </button>
-            <button onClick={onClose} aria-label="Close notifications">
-              <X size={22} className="text-gray-500 hover:text-red-500" />
+
+            <button
+              onClick={onClose}
+              aria-label="Close notifications"
+              className="p-1 rounded-md hover:bg-gray-200 transition-colors"
+            >
+              <X size={22} className="text-gray-600" />
             </button>
           </div>
         </div>
 
         {/* Filter Tabs */}
-        <div className="flex items-center justify-center gap-4 py-2 border-b bg-white">
+        <div className="flex items-center justify-center gap-4 py-2 border-b bg-white sticky top-[56px] z-10">
           <button
             onClick={() => handleFilterChange("all")}
             className={`text-sm font-medium px-3 py-1 rounded-md transition-colors ${
@@ -100,7 +101,7 @@ const NotificationsDrawer = ({
         </div>
 
         {/* Content */}
-        <div className="overflow-y-auto h-[calc(100vh-100px)] px-4 py-3">
+        <div className="overflow-y-auto flex-1 px-4 py-3 bg-white">
           {!loading && notifications.length === 0 && (
             <p className="text-gray-400 text-center mt-10">
               {filter === "unread"

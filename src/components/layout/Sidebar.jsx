@@ -21,7 +21,7 @@ const Sidebar = () => {
   };
 
   return (
-    <aside className="fixed left-0 top-0 h-screen w-64 flex flex-col justify-between bg-white py-8 px-6 border-r border-gray-200">
+    <aside className="fixed left-0 top-0 h-screen w-72 z-[60] bg-white flex flex-col justify-between py-8 px-6 border-r border-gray-200">
       {/* ------------------------------------------------------------
          * Top Section — App Title and Navigation
          * ------------------------------------------------------------ */}

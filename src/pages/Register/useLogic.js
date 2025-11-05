@@ -4,6 +4,7 @@
    Handles:
    - Registration form input management
    - Account creation via API
+   - Show/Hide password toggle
    - Loading state and snackbar notifications
 ====================================================== */
 
@@ -14,12 +15,13 @@ export const useLogic = () => {
   /* ----------------------------------------
    * References
    * ---------------------------------------- */
-  const loadingRef = useRef(false); 
+  const loadingRef = useRef(false);
 
   /* ----------------------------------------
    * States
    * ---------------------------------------- */
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -36,7 +38,6 @@ export const useLogic = () => {
 
   /* ----------------------------------------
    * Derived: Form Validation
-   * Ensures all required fields are filled
    * ---------------------------------------- */
   const isValid = useMemo(() => {
     const { user_fname, user_lname, user_email, user_password } = formValues;
@@ -55,7 +56,6 @@ export const useLogic = () => {
 
   /* ----------------------------------------
    * Handle Input Changes
-   * Dynamically updates form field state
    * ---------------------------------------- */
   const handleInputChange = useCallback((e) => {
     const { name, value } = e.target;
@@ -66,7 +66,14 @@ export const useLogic = () => {
   }, []);
 
   /* ----------------------------------------
-   * Utility: Normalize error messages
+   * Toggle Password Visibility
+   * ---------------------------------------- */
+  const handleTogglePassword = useCallback(() => {
+    setShowPassword((prev) => !prev);
+  }, []);
+
+  /* ----------------------------------------
+   * Normalize Error Messages
    * ---------------------------------------- */
   const toMessage = (err) =>
     (typeof err === "string" && err) ||
@@ -76,7 +83,6 @@ export const useLogic = () => {
 
   /* ----------------------------------------
    * Handle Registration Submission
-   * Sends data to backend and redirects on success
    * ---------------------------------------- */
   const handleSubmit = useCallback(
     async (e) => {
@@ -86,7 +92,6 @@ export const useLogic = () => {
       loadingRef.current = true;
       setLoading(true);
 
-      // Trim payload before sending
       const payload = {
         user_fname: formValues.user_fname.trim(),
         user_lname: formValues.user_lname.trim(),
@@ -100,13 +105,19 @@ export const useLogic = () => {
         if (!response?.success)
           throw new Error(response?.msg || "Registration failed.");
 
-        // Redirect to homepage after successful registration
-        window.location.href = "/";
+        setSnackbar({
+          open: true,
+          message: "Account created successfully! Redirecting...",
+          severity: "success",
+        });
+
+        // Redirect after short delay
+        setTimeout(() => {
+          window.location.href = "/";
+        }, 1000);
       } catch (error) {
         console.error("Register Error:", error);
-        // Clear password on error
         setFormValues((prev) => ({ ...prev, user_password: "" }));
-
         setSnackbar({
           open: true,
           message: toMessage(error),
@@ -121,21 +132,20 @@ export const useLogic = () => {
   );
 
   /* ----------------------------------------
-   * Handle Snackbar Close
+   * Close Snackbar
    * ---------------------------------------- */
   const handleCloseSnackbar = useCallback(() => {
     setSnackbar((prev) => ({ ...prev, open: false }));
   }, []);
 
-  /* ----------------------------------------
-   * Expose Reactive State & Functions
-   * ---------------------------------------- */
   return {
     loading,
     snackbar,
     formValues,
+    showPassword,
     isSubmitDisabled,
     handleInputChange,
+    handleTogglePassword,
     handleSubmit,
     handleCloseSnackbar,
   };

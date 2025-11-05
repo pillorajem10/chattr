@@ -20,7 +20,7 @@ const Navbar = () => {
       {/* ------------------------------------------------------------
          * Navbar Header
          * ------------------------------------------------------------ */}
-      <header className="flex items-center justify-between px-6 py-3 bg-white border-b border-gray-200 z-[9999] fixed top-0 left-0 lg:left-64 right-0 h-14">
+      <header className="flex items-center justify-between z-40 px-6 py-3 bg-white border-b border-gray-200 fixed top-0 left-0 lg:left-64 right-0 h-14">
         {/* ------------------------------------------------------------
            * Brand — visible only when sidebar is hidden
            * ------------------------------------------------------------ */}
