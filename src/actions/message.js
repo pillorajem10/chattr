@@ -11,9 +11,9 @@ import {
         MESSAGES ACTIONS
 ================================*/
 
-export const getUserChatroomsAction = async () => {
+export const getUserChatroomsAction = async (payload) => {
   try {
-    const res = await getUserChatroomsService();
+    const res = await getUserChatroomsService(payload);
     return res;
   } catch (error) {
     throw error;

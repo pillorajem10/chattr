@@ -4,8 +4,8 @@
    Handles:
    - Loading chatrooms and users
    - Opening and creating chatrooms
-   - Real-time chatroom updates via Echo
-   - Sending and receiving messages in real-time
+   - Real-time updates via Echo
+   - Sending and receiving messages
    - Marking conversations as read
    - Snackbar feedback and UI state
 ====================================================== */
@@ -24,35 +24,28 @@ export const useLogic = () => {
   const currentUserId = currentUser ? Number(currentUser.id) : null;
 
   /* ----------------------------------------
-   * UI State
+   * UI & Data States
    * ---------------------------------------- */
   const [isOpen, setIsOpen] = useState(false);
   const [view, setView] = useState("list");
   const [selectedChatroom, setSelectedChatroom] = useState(null);
-
-  /* ----------------------------------------
-   * Data State
-   * ---------------------------------------- */
   const [chatrooms, setChatrooms] = useState([]);
   const [messages, setMessages] = useState([]);
   const [messageText, setMessageText] = useState("");
   const [users, setUsers] = useState([]);
-
-  const [userPageDetails, setUserPageDetails] = useState({
-    totalRecords: 0,
-    pageIndex: 1,
-    totalPages: 1,
-  });
-
-  /* ----------------------------------------
-   * Loading & Snackbar
-   * ---------------------------------------- */
+  const [chatFilter, setChatFilter] = useState("all");
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
     severity: "success",
+  });
+
+  const [userPageDetails, setUserPageDetails] = useState({
+    totalRecords: 0,
+    pageIndex: 1,
+    totalPages: 1,
   });
 
   const chatroomRef = useRef(null);
@@ -74,23 +67,27 @@ export const useLogic = () => {
   /* ----------------------------------------
    * Chatroom Operations
    * ---------------------------------------- */
-  const handleGetChatrooms = useCallback(async (filter = "all") => {
-    try {
-      setLoading(true);
-      const res = await actions.message.getUserChatroomsAction(filter);
-      if (!res.success) throw new Error(res.msg || "Failed to load chatrooms.");
-      setChatrooms(res.data);
-    } catch (error) {
-      console.error("Chatroom Load Error:", error);
-      setSnackbar({
-        open: true,
-        message: "Failed to load chatrooms.",
-        severity: "error",
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const handleGetChatrooms = useCallback(
+    async (filter = chatFilter) => {
+      try {
+        setLoading(true);
+        const res = await actions.message.getUserChatroomsAction({ filter });
+        if (!res.success)
+          throw new Error(res.msg || "Failed to load chatrooms.");
+        setChatrooms(res.data);
+        setChatFilter(filter);
+      } catch (error) {
+        setSnackbar({
+          open: true,
+          message: "Failed to load chatrooms.",
+          severity: "error",
+        });
+      } finally {
+        setLoading(false);
+      }
+    },
+    [chatFilter]
+  );
 
   const handleOpenChatroom = useCallback(async (chatroom) => {
     try {
@@ -104,7 +101,6 @@ export const useLogic = () => {
 
       setMessages(res.data.records);
 
-      // Mark as read immediately when opening
       await actions.message.markConversationAsReadAction(chatroom.id);
       setChatrooms((prev) =>
         prev.map((c) =>
@@ -132,19 +128,15 @@ export const useLogic = () => {
         const res = await actions.message.createChatroomAction({
           receiver_id: receiverId,
         });
-
         if (!res.success)
           throw new Error(res.msg || "Failed to create chatroom.");
 
         let newChatroom = res.data.chatroom;
-
-        // Determine which user is the receiver
         const isUserOne = newChatroom.cr_user_one_id === currentUserId;
         const receiver = isUserOne
           ? newChatroom.user_two || newChatroom.userTwo
           : newChatroom.user_one || newChatroom.userOne;
 
-        // Ensure receiver details are embedded for display
         newChatroom = {
           ...newChatroom,
           receiver_name: receiver
@@ -152,7 +144,6 @@ export const useLogic = () => {
             : "User",
         };
 
-        // Add chatroom to list if not existing
         setChatrooms((prev) => {
           const exists = prev.some((c) => c.id === newChatroom.id);
           return exists ? prev : [newChatroom, ...prev];
@@ -183,14 +174,17 @@ export const useLogic = () => {
   );
 
   /* ----------------------------------------
-   * Real-Time Chatroom Events (Echo)
+   * Real-Time Updates via Echo
    * ---------------------------------------- */
   useEffect(() => {
     if (!currentUserId) return;
 
-    const channel = echo.private(`chatrooms.${currentUserId}`);
+    const userChannel = echo.private(`chatrooms.${currentUserId}`);
+    const messageChannel = echo.private(`messages.${currentUserId}`);
+    const subscribedChannels = [];
 
-    channel.listen(".chatroom.created", (event) => {
+    // Listen for new chatroom creation
+    userChannel.listen(".chatroom.created", (event) => {
       const newChatroom = event.chatroom;
       setChatrooms((prev) => {
         const exists = prev.some((c) => c.id === newChatroom.id);
@@ -198,40 +192,111 @@ export const useLogic = () => {
       });
     });
 
-    return () => {
-      echo.leave(`private-chatrooms.${currentUserId}`);
-    };
-  }, [currentUserId]);
+    // Listen globally for direct messages
+    messageChannel.listen(".message.sent", (event) => {
+      const message = event.message || event;
+      const chatroomId = message.message_chatroom_id;
 
-  /* ----------------------------------------
-   * Real-Time Message Updates (Echo)
-   * ---------------------------------------- */
-  useEffect(() => {
-    if (!selectedChatroom?.id) return;
+      setChatrooms((prev) => {
+        let updated = prev.map((c) =>
+          c.id === chatroomId
+            ? {
+                ...c,
+                messages: [message],
+                unread_count:
+                  selectedChatroom?.id === chatroomId
+                    ? 0
+                    : (c.unread_count || 0) + 1,
+              }
+            : c
+        );
 
-    const chatroomId = selectedChatroom.id;
-    const channel = echo.private(`chatroom.${chatroomId}`);
+        updated.sort((a, b) => {
+          const timeA = a.messages?.[0]?.created_at || a.updated_at;
+          const timeB = b.messages?.[0]?.created_at || b.updated_at;
+          return new Date(timeB) - new Date(timeA);
+        });
 
-    // Listen for new messages in this chatroom
-    channel.listen(".message.sent", (event) => {
-      setMessages((prev) => [event, ...prev]);
+        if (chatFilter === "unread") {
+          updated = updated.filter((c) => c.unread_count > 0);
+        }
+
+        return updated;
+      });
+
+      setMessages((prev) =>
+        selectedChatroom?.id === chatroomId ? [message, ...prev] : prev
+      );
     });
 
-    // Listen for read receipts
-    channel.listen(".message.read", (event) => {
-      setMessages((prev) =>
-        prev.map((msg) =>
-          msg.message_sender_id === event.receiver_id
-            ? { ...msg, message_read: true }
-            : msg
+    messageChannel.listen(".message.read", (event) => {
+      const receiverId = event.receiver_id;
+      setChatrooms((prev) =>
+        prev.map((c) =>
+          c.cr_user_one_id === receiverId || c.cr_user_two_id === receiverId
+            ? { ...c, unread_count: 0 }
+            : c
         )
       );
     });
 
+    // Subscribe to all active chatrooms
+    if (chatrooms.length > 0) {
+      chatrooms.forEach((room) => {
+        const roomChannel = echo.private(`chatroom.${room.id}`);
+
+        roomChannel.listen(".message.sent", (event) => {
+          const message = event.message || event;
+          const chatroomId = message.message_chatroom_id;
+
+          setChatrooms((prev) =>
+            prev.map((c) =>
+              c.id === chatroomId
+                ? {
+                    ...c,
+                    messages: [message],
+                    unread_count:
+                      selectedChatroom?.id === chatroomId
+                        ? 0
+                        : (c.unread_count || 0) + 1,
+                  }
+                : c
+            )
+          );
+
+          setMessages((prev) =>
+            selectedChatroom?.id === chatroomId ? [message, ...prev] : prev
+          );
+        });
+
+        roomChannel.listen(".message.read", (event) => {
+          const receiverId = event.receiver_id;
+          setChatrooms((prev) =>
+            prev.map((c) =>
+              c.id === room.id ? { ...c, unread_count: 0 } : c
+            )
+          );
+
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.message_sender_id === receiverId
+                ? { ...msg, message_read: true }
+                : msg
+            )
+          );
+        });
+
+        subscribedChannels.push(`chatroom.${room.id}`);
+      });
+    }
+
+    // Cleanup
     return () => {
-      echo.leave(`private-chatroom.${chatroomId}`);
+      echo.leave(`private-chatrooms.${currentUserId}`);
+      echo.leave(`private-messages.${currentUserId}`);
+      subscribedChannels.forEach((ch) => echo.leave(ch));
     };
-  }, [selectedChatroom?.id]);
+  }, [currentUserId, chatrooms, selectedChatroom, chatFilter]);
 
   /* ----------------------------------------
    * Messaging Operations
@@ -253,8 +318,6 @@ export const useLogic = () => {
       });
 
       if (!res.success) throw new Error(res.msg || "Failed to send message.");
-
-      setMessages((prev) => [res.data.message, ...prev]);
       setMessageText("");
     } catch (error) {
       console.error("Send Message Error:", error);
@@ -269,21 +332,14 @@ export const useLogic = () => {
   }, [messageText, selectedChatroom, sending, currentUserId]);
 
   /* ----------------------------------------
-   * User Operations 
+   * User Operations
    * ---------------------------------------- */
   const handleGetUsers = useCallback(
     async (pageIndex = 1, searchQuery = "") => {
       try {
         setLoading(true);
-
-        const params = {
-          pageIndex,
-          pageSize: 500,
-        };
-
-        if (searchQuery.trim()) {
-          params.search = searchQuery.trim();
-        }
+        const params = { pageIndex, pageSize: 500 };
+        if (searchQuery.trim()) params.search = searchQuery.trim();
 
         const res = await actions.user.fetchUsersAction(params);
         if (!res.success) throw new Error(res.msg || "Failed to load users.");
@@ -310,7 +366,6 @@ export const useLogic = () => {
     },
     []
   );
-
 
   /* ----------------------------------------
    * Snackbar Controls
@@ -341,6 +396,7 @@ export const useLogic = () => {
     snackbar,
     userPageDetails,
     users,
+    chatFilter,
     setMessageText,
     handleToggleDrawer,
     handleCloseChat,
