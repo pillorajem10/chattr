@@ -1,16 +1,123 @@
-# React + Vite
+# <h1 align="center">Chattr Frontend – Setup and Configuration Guide</h1>
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+<p align="center">
+A React-based frontend powered by Vite, built with Node.js 20.19.0 and npm 10.8.2.  
+This client connects with the Laravel 10 API backend and supports real-time features via Laravel WebSockets.
+</p>
 
-Currently, two official plugins are available:
+<hr/>
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Table of Contents
+- [1. System Requirements](#1-system-requirements)
+- [2. Installation Procedure](#2-installation-procedure)
+- [3. Running the Application](#3-running-the-application)
+- [4. Environment Configuration](#4-environment-configuration)
+- [5. Backend & WebSocket Setup](#5-backend--websocket-setup)
+- [6. Quick Command Summary](#6-quick-command-summary)
+- [7. Completion](#7-completion)
 
-## React Compiler
+<hr/>
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## <h2 id="1-system-requirements">1. System Requirements</h2>
 
-## Expanding the ESLint configuration
+Ensure your system meets the following requirements:
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+- Node.js **v20.19.0**  
+- npm **v10.8.2**  
+- Modern web browser (Chrome, Firefox, or Edge)
+
+<hr/>
+
+## <h2 id="2-installation-procedure">2. Installation Procedure</h2>
+
+### Step 1 – Clone the Repository
+```bash
+git clone https://github.com/pillorajem10/chattr.git
+cd chattr
+```
+
+### Step 2 – Install Dependencies
+```bash
+npm install
+```
+
+### Step 3 – Configure Environment File
+Copy the example environment file provided:
+```bash
+cp .env.example .env
+```
+
+> **Note:** The `.env.example` already includes the correct values for local setup — no further edits required.
+
+<hr/>
+
+## <h2 id="3-running-the-application">3. Running the Application</h2>
+
+Start the frontend in development mode:
+```bash
+npm run dev
+```
+
+Default URL: [http://127.0.0.1:5173](http://127.0.0.1:5173)
+
+Once started, the app will automatically connect to the backend API and WebSocket server if they are running locally.
+
+<hr/>
+
+## <h2 id="4-environment-configuration">4. Environment Configuration</h2>
+
+The `.env.example` file includes the following variables:
+
+```bash
+VITE_API_BASE_URL=http://127.0.0.1:8000/api
+VITE_PUSHER_APP_KEY=local
+VITE_PUSHER_HOST=127.0.0.1
+VITE_PUSHER_PORT=6001
+VITE_PUSHER_SCHEME=http
+VITE_PUSHER_CLUSTER=mt1
+```
+
+> These values ensure seamless communication with the local Laravel backend and WebSocket instance.
+
+<hr/>
+
+## <h2 id="5-backend--websocket-setup">5. Backend & WebSocket Setup</h2>
+
+Make sure the **Laravel API** and **WebSocket server** are running locally.
+
+### Laravel API
+```bash
+php artisan serve
+```
+Accessible at [http://127.0.0.1:8000](http://127.0.0.1:8000)
+
+### Laravel WebSocket Server
+```bash
+php artisan websockets:serve
+```
+
+Dashboard: [http://127.0.0.1:8000/laravel-websockets](http://127.0.0.1:8000/laravel-websockets)
+
+<hr/>
+
+## <h2 id="6-quick-command-summary">6. Quick Command Summary</h2>
+
+| Command | Description |
+|:--|:--|
+| `npm install` | Install project dependencies |
+| `cp .env.example .env` | Copy default environment configuration |
+| `npm run dev` | Run the local development server |
+
+<hr/>
+
+## <h2 id="7-completion">7. Completion</h2>
+
+Your **Chattr Frontend** is now ready for local use.  
+Access it via [http://127.0.0.1:5173](http://127.0.0.1:5173) while your Laravel API runs on [http://127.0.0.1:8000](http://127.0.0.1:8000).  
+
+For deployment:
+- You may host on **Netlify**, **Vercel**, or any static hosting platform.  
+- Simply run `npm run build` and deploy the generated `/dist` folder.
+
+<hr/>
+<p align="center" style="color:gray">React 18 • Vite • Node.js 20.19.0 • WebSockets</p>
